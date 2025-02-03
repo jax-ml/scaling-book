@@ -174,9 +174,9 @@ $$T_\text{math} = \frac{2BDF}{2 \cdot \text{Accelerator FLOPs/s}} = \frac{BDF}{1
 
 Now what about $T_\text{comms}$? This now refers to the communication time between chips! This is just the total bytes sent divided by the network bandwidth, i.e.
 
-$$T_\text{comms} = \frac{2BF}{\text{Network Bandwidth GB/s}} = \frac{2BF}{5e10}$$
+$$T_\text{comms} = \frac{2BF}{\text{Network Bandwidth}} = \frac{2BF}{5e10}$$
 
-Therefore we become compute-bound (now with respect to the inter-chip network) when $\text{Intensity}(\text{matmul (2-chips)}) > \text{Intensity}(\text{TPU w.r.t. inter-chip network})$ or equivalently when $\frac{BDF}{2BF} = \frac{D}{2} > \frac{1.97e14}{5e10} = 3940$ or $D > 7880$. Note that, unlike before, the critical threshhold now depends on $D$ and not $B$! Try to think why that is. This is just one such example, but we highlight that this kind of roofline is critical to knowing when we can parallelize an operation across multiple TPUs.
+Therefore we become compute-bound (now with respect to the inter-chip network) when $$\text{Intensity}(\text{matmul (2-chips)}) > \text{Intensity}(\text{TPU w.r.t. inter-chip network})$$ or equivalently when $\frac{BDF}{2BF} = \frac{D}{2} > \frac{1.97e14}{5e10} = 3940$ or $D > 7880$. Note that, unlike before, the critical threshhold now depends on $D$ and not $B$! Try to think why that is. This is just one such example, but we highlight that this kind of roofline is critical to knowing when we can parallelize an operation across multiple TPUs.
 
 ## A Few Problems to Work
 

@@ -13,13 +13,13 @@ The website uses a Distill-style Jekyll theme created by https://github.com/alsh
 To build this repo locally, run
 
 ```
-git clone https://github.com/scaling-book/scaling-book.github.io.git
-cd scaling-book.github.io
+git clone https://github.com/jax-ml/scaling-book.git
+cd scaling-book
 bundle install
 bundle exec jekyll serve
 ```
 
-To run on Mac OS, you may need to run some of the following as well: `brew install imagemagick`, `pip install jupyter`, `brew install ruby`, or `git config safe.bareRepository all`, depending on what errors you hit. Once you have run jekyll serve successfully, the book will be available at `localhost:4000`.
+To run on Mac OS, you may need to run some of the following as well: `brew install imagemagick`, `pip install jupyter`, `brew install ruby`, or `git config safe.bareRepository all`, depending on what errors you hit. Once you have run jekyll serve successfully, the book will be available at `localhost:4000/scaling-book`.
 
 ### Contributing and Contact
 

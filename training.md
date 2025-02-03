@@ -583,7 +583,7 @@ $$
 \small
 \begin{array}{ccc}
 \text{Strategy} & \text{Compute per layer} & \text{Comms per layer} \\
-& \text{(ignoring gating einsum)} & \text{(bytes, forward pass)}\\
+& \text{(ignoring gating einsum)} & \text{(bytes, forward + backward pass)}\\
 \hline
 \text{DP} & 4BDF/X + 8BDF/X & 0 + 8DF \\
 \text{FSDP} & 4BDF/X + 8BDF/X & 4DF + 8DF \\

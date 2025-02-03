@@ -81,9 +81,9 @@ _styles: >
 
 ## What Do We Mean By Scaling?
 
-Scaling is hard because increasing the number of chips increases the communication load while reducing the amount of per-device computation we have to mask it. As we saw in the previous section, sharded matrix multiplications often require expensive AllGathers or ReduceScatters that can block the TPUs from doing useful work. The goal of this section is to find out when these become *too expensive.* While performance on a single chip depends on the trade-off between memory bandwidth and FLOPs, performance at the cluster level depends on hiding inter-chip communication by overlapping it with useful FLOPS.
+The goal of “model scaling” is to be able to increase the number of chips used for training or inference while achieving a proportional, linear increase in throughput. We call this *strong scaling*”. This is difficult to achieve because increasing the number of chips increases the communication load while reducing the amount of per-device computation we can use to hide it. As we saw in [Section 3](../sharding), sharded matrix multiplications often require expensive AllGathers or ReduceScatters that can block the TPUs from doing useful work. The goal of this section is to find out when these become *too expensive.*<d-footnote>While performance on a single chip depends on the trade-off between memory bandwidth and FLOPs, performance at the cluster level depends on hiding inter-chip communication by overlapping it with useful FLOPS.</d-footnote>
 
-In this section, we'll discuss three common parallelism schemes: (pure) **data parallelism, fully-sharded data parallelism** (FSDP / ZeRO sharding), and **tensor parallelism**. For each, we'll show what communication cost we incur and at what point that cost starts to bottleneck our compute cost.<d-footnote>We'll focus on communication bounds — since while memory capacity constraints are important, they typically do not bound us when using rematerialization (activation checkpointing) and a very large number of chips during pre-training. We also do not discuss expert parallelism here for MoEs — which expands the design space substantially, only the base case of a dense Transformer.</d-footnote> We'll use the following notation to simplify calculations throughout this section.
+In this section, we'll discuss four common parallelism schemes: (pure) **data parallelism, fully-sharded data parallelism** (FSDP / ZeRO sharding), **tensor parallelism**, and (briefly) **pipeline parallelism**. For each, we'll show what communication cost we incur and at what point that cost starts to bottleneck our compute cost.<d-footnote>We'll focus on communication bounds — since while memory capacity constraints are important, they typically do not bound us when using rematerialization (activation checkpointing) and a very large number of chips during pre-training. We also do not discuss expert parallelism here for MoEs — which expands the design space substantially, only the base case of a dense Transformer.</d-footnote> We'll use the following notation to simplify calculations throughout this section.
 
 | Notation | Meaning                                                                    |
 | :------- | :------------------------------------------------------------------------- |
@@ -112,15 +112,19 @@ $$\text{In}[B_X, D] *_D W_{in}[D, F] *_F W_{out}[F, D] \rightarrow \text{Out}[B_
 
 $$\text{In}[B_X, D] *_D W_{in}[D_X, F] *_F W_{out}[F, D_X] \rightarrow \text{Out}[B_X, D]$$
 
-**3. Tensor parallelism (also called Megatron sharding or model parallelism):** *activations sharded along D (dmodel), parameters sharded along F (dff). AllGather and ReduceScatter activations before and after each block. Unlike FSDP, FLOPs are actually split across devices but communication can block the forward pass.*
+**3. Tensor parallelism (also called Megatron sharding or model parallelism):** *activations sharded along D ($d_\text{model}$), parameters sharded along F ($d_{ff}$). AllGather and ReduceScatter activations before and after each block. Compatible with FSDP.*
 
 $$\text{In}[B, D_Y] *_D W_{in}[D, F_Y] *_F W_{out}[F_Y, D] \rightarrow \text{Out}[B, D_Y]$$
+
+**4. Pipeline parallelism:** *weights sharded along the layer dimension, activations microbatched and rolled along the layer dimension. Communication between pipeline stages is minimal (just moving activations over a single hop). To abuse notation:*
+
+$$\text{In}[L_Z, B, D][i] *_D W_{in}[L_Z, D, F][i] *_F W_{out}[L_Z, F, D][i] \rightarrow \text{Out}[L_Z, B, D_Y][i]$$
 
 ### Data Parallelism
 
 **Syntax:** $$\text{In}[B_X, D] *_D W_{in}[D, F] *_F W_{out}[F, D] \rightarrow \text{Out}[B_X, D]$$
 
-**When your model fits on a single chip with even a tiny batch size (\>240 tokens, so as to be compute-bound), you should always use simple data parallelism.** Pure data parallelism splits our activations across any number of TPUs so long as the number of TPUs is smaller than our batch size. The forward pass involves no communication, but at the end of every step, each performs an **AllReduce on their gradients in order to synchronize them before updating the parameters.**
+**When your model fits on a single chip with even a tiny batch size (>240 tokens, so as to be compute-bound), you should always use simple data parallelism.** Pure data parallelism splits our activations across any number of TPUs so long as the number of TPUs is smaller than our batch size. The forward pass involves no communication, but at the end of every step, each performs an **AllReduce on their gradients in order to synchronize them before updating the parameters.**
 
 {% include figure.liquid path="assets/img/data-parallelism.png" class="img-fluid" caption="<b>Figure:</b> a diagram of pure data parallelism (forward pass). Our activations (left) are fully sharded along the batch dimension and our weights are fully replicated, so each TPU has an identical copy of the weights. This means the total memory of our weights is increased by a factor of N, but no communication is required on the forward-pass." %}
 

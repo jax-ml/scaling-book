@@ -250,9 +250,9 @@ The Memory Profile makes it easy to see the program memory as a function of time
 
 ## Worked Problems
 
-**Question 1**: take a look at [this](https://xprof.corp.google.com/trace_viewer/jaaustin-1725838886028415635?hosts=server.7134.0001-gebiv2_691688&host_index=4) profile and figure out what looks suspicious and what's going on here. Can you tell me exactly what computations are happening and what each operation is doing? What are the true shapes of each matrix involved and how are they sharded? 
+**Question 1**: take a look at [this](https://colab.research.google.com/drive/1LfLO3OTr-_MWFPxUN36KJ3cqH0BcAoli?usp=sharing) Colab/profile and figure out what looks suspicious and what's going on here. Can you tell me exactly what computations are happening and what each operation is doing? What are the true shapes of each matrix involved and how are they sharded? *Try looking at the profile first without reading the code.*
 
-{% include figure.liquid path="assets/img/xprof-problem1.png" class="img-fluid" %}
+{% include figure.liquid path="assets/img/all-reduce-profile.png" class="img-fluid" %}
 
 {% details Click here for the answer. %}
 
@@ -263,74 +263,21 @@ def matmul(w1, w2, x):
   return jnp.einsum('wf,bf->bw', w2, jnp.einsum('fw,bw->bf', w1, x))
 ```
 
-The big copy in the middle is XLA attempting to copy the weights of w2 into VMEM, but there isn't enough time for this copy to finish before the first matmul finishes. What we're seeing is the copy-done waiting for the second prefetch to finish before running the second matmul. From clicking around the profile, you can see the first matmul has shape
+You can see a reduce, two big fusions, and an all-reduce. The first big fusion is:
 
-```%fusion = bf16[8,4096]{1,0:T(8,128)(2,1)S(1)} fusion(bf16[8,8192]{1,0:T(8,128)(2,1)} %param, bf16[4096,8192]{1,0:T(8,128)(2,1)} %param.1), kind=kOutput, calls=%fused_computation```
+```%fusion.1 = bf16[4096]{0:T(1024)(128)(2,1)} fusion(bf16[4096,8192]{1,0:T(8,128)(2,1)} %param.1, bf16[8192]{0:T(1024)(128)(2,1)} %reduce.6), kind=kLoop, calls=%fused_computation.1```
 
-which tells us the per-shard shape is `bf16[8, 8192] * bf16[4096, 8192] -> bf16[8, 4096]` (over the 8192 dimension). By observing the final AllReduce with `replica_groups=\{\{0,16,32,48,64,80,96,112\}, ...\}`, we can tell we're doing 8-way model parallelism, so the true shapes are `[8, 8192] * bf16[32,768, 8192] -> bf16[8, 32,768]`.
-
-{% details For reference, the full code is here. %}
-
-```py
-import jax
-import jax.numpy as jnp
-import jax.sharding as shd
-
-P = shd.PartitionSpec
-
-mesh = shd.Mesh(devices=np.asarray(jax.devices()).reshape(8, 16), axis_names=('x', 'y'))
-
-d_model = 8192
-batch = 8
-ffw_mult = 4
-
-cpu_device = jax.devices('cpu')[0]
-
-cpu_x = jnp.zeros((batch, d_model), dtype=jnp.bfloat16, device=cpu_device)
-cpu_w1 = jnp.zeros((ffw_mult * d_model, d_model), dtype=jnp.bfloat16, device=cpu_device)
-cpu_w2 = jnp.zeros((d_model, ffw_mult * d_model), dtype=jnp.bfloat16, device=cpu_device)
-
-def matmul(w1, w2, x):
-  return jnp.einsum('wf,bf->bw', w2, jnp.einsum('fw,bw->bf', w1, x))
-
-def make_sharding():
-  model_axes = ('x',)
-  return (shd.NamedSharding(mesh, P(model_axes, None)),
-          shd.NamedSharding(mesh, P(None, model_axes)),
-          shd.NamedSharding(mesh, P(None,)))
-
-w1_sharding, w2_sharding, x_sharding = make_sharding()
-
-try:
-  del x, w1, w2
-except:
-  pass
-
-x, w1, w2 = jax.device_put(cpu_x, x_sharding), jax.device_put(cpu_w1, w1_sharding), jax.device_put(cpu_w2, w2_sharding)
-
-jit_matmul = jax.jit(matmul, in_shardings=make_sharding()).lower(w1, w2, x).compile()
-result = jit_matmul(w1, w2, x)
-```
+which tells us the per-shard shape is `bf16[8192] * bf16[4096, 8192] -> bf16[4096]` (over the 8192 dimension). By observing the final AllReduce with `replica_groups=\{\{0,16,32,48,64,80,96,112\}, ...\}`, we can tell we're doing 8-way model parallelism, so the true shapes are `[8, 8192] * bf16[32,768, 8192] -> bf16[8, 32,768]`.
 
 {% enddetails %}
 
-{% enddetails %}
+**Question 2:** [The Transformer Colab from earlier](https://colab.research.google.com/drive/1_6krERgtolH7hbUIo7ewAMLlbA4fqEF8?usp=sharing) implements a simple mock Transformer. Follow the instructions in the Colab and get a benchmark of the naive Transformer with GSPMD partitioning. How long does each part take? How long should it take? What sharding is being used. Try fixing the sharding! *Hint: use `jax.lax.with_sharding_constraints` to constrain the behavior. With this fix, what's the best MXU you can get?*
 
-
-**Question 2: \[30 min\]** Take a look at [this profile](https://xprof.corp.google.com/trace_viewer/jaaustin-1727120017216634666?hosts=server.4618.0000-pycrj2_2227499&host_index=2&view_start=25.901&view_end=33.024).
+For reference, the initial version gets roughly 184ms / layer and the optimized profile gets 67 ms / layer. Once you've done this, try staring at the profile and see if you can answer these questions purely from the profile:
 
 - What sharding strategy is this?  
 - What is the batch size, $$d_\text{model}$$, $$d_\text{ff}$$?  
 - What fraction of time is spent on attention vs. the MLP block?  
 - What fraction of time should be spent on each op at the roofline? 
-- How does that compare to the real deal?
-
-{% include figure.liquid path="assets/img/xprof-problem2.png" class="img-fluid" %}
-
-Is there anything that could be optimized here? The profile comes from [this Colab](https://colab.corp.google.com/drive/1buQMb5R9SexLkNnqK32OldPc3OcOwfSF?resourcekey=0-IH1omZ2QZ3RHKMH8KaLlAA&usp=sharing) if you want to play with it yourself.
-
-**Question 3:** [This Colab](https://colab.research.google.com/drive/1_6krERgtolH7hbUIo7ewAMLlbA4fqEF8?usp=sharing) implements a simple mock Transformer. Follow the instructions in the Colab and get a benchmark of the naive Transformer with GSPMD partitioning. How long does each part take? How long should it take? What sharding is being used. Try fixing the sharding! *Hint: use `jax.lax.with_sharding_constraints` to constrain the behavior. With this fix, what's the best MXU you can get?*
-
-[Here's](https://xprof.corp.google.com/trace_viewer/jaaustin-1730767872483271008?hosts=server.6977.0001-pduu7_2503615&host_index=2&view_start=-499.963&view_end=677.286) the naive profile for reference. For reference, [here](https://xprof.corp.google.com/trace_viewer/jaaustin-1730768165242117635?hosts=server.6977.0001-pduu7_2503615%2Cserver.9288.0000-pdci11_54759&host_index=2%2C3&view_start=-19.580&view_end=790.674) was my profile after the fixes.
 
 <h3 markdown=1 class="next-section">That's all for Part 9. For Part 10, with a deep dive into JAX parallelism, click [here](../jax-stuff).</h3>

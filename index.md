@@ -48,8 +48,7 @@ authors:
 #     for hyperlinks within the post to work correctly.
 #   - please use this format rather than manually creating a markdown table of contents.
 toc:
-  - name: Why should you care?
-  - name: High-level outline
+  - name: High-Level Outline
   - name: Links to Sections
 
 # Below is an example of injecting additional post-specific styles.
@@ -86,7 +85,7 @@ Much of deep learning still boils down to alchemy, but understanding and optimiz
 
 **Goals & Feedback:** By the end, you should feel comfortable estimating the best parallelism scheme for a Transformer model on a given hardware platform, and roughly how long training and inference should take. If you don't, message us! We'd love to know how we could make this clearer.
 
-## Why Should You Care?
+### Why should you care?
 
 Three or four years ago, I don't think most ML researchers would have needed to understand any of this. But today even “small” models run so close to hardware limits that doing novel research requires you to think about efficiency at scale.<d-footnote>Historically, ML research has followed something of a tick-tock cycle between systems innovations and software improvements. Alex Krizhevsky had to write unholy CUDA code to make CNNs fast but within a couple years, libraries like Theano and TensorFlow meant you didn't have to. Maybe that will happen here too and everything in this book will be abstracted away in a few years. But scaling laws have pushed our models perpetually to the very frontier of our hardware, and it seems likely that, in the near future, doing cutting edge research will be inextricably tied to an understanding of how to efficiently scale models to large hardware topologies.</d-footnote> **A 20% win on benchmarks is irrelevant if it comes at a 20% cost to roofline efficiency.** Promising model architectures routinely fail either because they _can't_ run efficiently at scale or because no one puts in the work to make them do so.
 
@@ -94,9 +93,9 @@ Three or four years ago, I don't think most ML researchers would have needed to 
 
 *Our goal in this book is to explain how TPU (and GPU) hardware works and how the Transformer architecture has evolved to perform well on current hardware. We hope this will be useful both for researchers designing new architectures and for engineers working to make the current generation of LLMs run fast.*
 
-### High-level outline
+## High-Level Outline
 
-The overall structure of this set of tutorials is as follows:
+The overall structure of this book is as follows:
 
 [Section 1](roofline) explains roofline analysis and what factors can limit our ability to scale (communication, computation, and memory). [Section 2](tpus) and [Section 3](sharding) talk in detail about how TPUs and modern GPUs work, both as individual chips and — of critical importance — as an interconnected system with inter-chip links of limited bandwidth and latency. We'll answer questions like:
 

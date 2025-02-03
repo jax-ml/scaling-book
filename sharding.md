@@ -84,7 +84,7 @@ _styles: >
 
 ## Partitioning Notation and Collective Operations
 
-When we train an LLM on ten thousand TPUs, we're still doing abstractly the same computation as if we're training on one. The difference is that **our arrays don't fit in the HBM of a single TPU**, so we have to split them up.<d-footnote>It's worth noting that we may also choose to parallelize for speed. Even if we could fit on a smaller number of chips, scaling to more simply gives us more FLOPs/s. During inference, for instance, we can sometimes fit on smaller topologies but choose to scale to larger ones in order to reduce latency. Likewise, during training we often scale to more chips to reduce the step time.</d-footnote> We call this "*sharding*” or "*partitioning*” our arrays.
+When we train an LLM on ten thousand TPUs, we're still doing abstractly the same computation as when we're training on one. The difference is that **our arrays don't fit in the HBM of a single TPU**, so we have to split them up.<d-footnote>It's worth noting that we may also choose to parallelize for speed. Even if we could fit on a smaller number of chips, scaling to more simply gives us more FLOPs/s. During inference, for instance, we can sometimes fit on smaller topologies but choose to scale to larger ones in order to reduce latency. Likewise, during training we often scale to more chips to reduce the step time.</d-footnote> We call this "*sharding*” or "*partitioning*” our arrays.
 
 Here's an example 2D array **A** sharded across 4 TPUs:
 
@@ -94,9 +94,13 @@ Note how the sharded array still has the same *global* or *logical shape* as uns
 
 ### A unified notation for sharding
 
-We use a variant of *named-axis notation* to describe *how* the tensor is sharded in blocks across the devices: we assume the existence of a 2D or 3D grid of devices called the **device mesh** where each axis has been given **mesh axis names** **e.g. X**, **Y, and Z.** We can then specify how the matrix data is laid out across the device mesh by describing how each named dimension of the array is partitioned across the physical mesh axes. We call this assignment a **sharding**.
+We use a variant of *named-axis notation* to describe *how* the tensor is sharded in blocks across the devices: we assume the existence of a 2D or 3D grid of devices called the **device mesh** where each axis has been given **mesh axis names** **e.g. X**, **Y, and Z.** We can then specify how the matrix data is laid out across the device mesh by describing how each named dimension of the array is partitioned across the physical mesh axes. We call this assignment a **sharding**. 
 
-**Example (2D sharding across 2 axes)**: $A[I_X, J_Y]$ is a sharding that tells us to shard the first axis, I, along the mesh axis X, and the second axis, J, along the mesh axis Y. Each shard holds $1 / (\lvert X\rvert \cdot \lvert Y\rvert)$ of the array, as in the diagram above (which shows the example with a `Mesh(devices=((0, 1), (2, 3)), axis_names=(‘X', ‘Y'))`). The local shape, that is, the size of the shard that an individual device holds, is $(\lvert I\rvert / \lvert X\rvert, \vert J\rvert / \lvert Y\rvert)$, where $$\lvert I\rvert$$ is the size of A's first dimension, $$\lvert J\rvert$$ is the size of A's second dimension, $$\lvert X\rvert$$ is the size of the X axis, and $$\lvert Y\rvert$$ is the size of the Y axis.
+**Example (the diagram above)**: For the above diagram, we have:
+* **Sharding:** $A[I_X, J_Y]$, which tells us to shard the first axis, $I$, along the mesh axis $X$, and the second axis, $J$, along the mesh axis $Y$. This sharding tells us that each shard holds $1 / (\lvert X\rvert \cdot \lvert Y\rvert)$ of the array. 
+* **Mesh:** the device mesh above `Mesh(devices=((0, 1), (2, 3)), axis_names=(‘X', ‘Y'))`, which tells us we have 4 TPUs in a 2x2 grid, with axis names $X$ and $Y$.
+
+Taken together, we know that the local shape of the array (the size of the shard that an individual device holds) is $(\lvert I\rvert / 2, \lvert J\rvert / 2)$, where $$\lvert I\rvert$$ is the size of A's first dimension and $$\lvert J\rvert$$ is the size of A's second dimension.
 
 **Example (2D sharding across 1 axis)**: $A[I_{XY}, J]$ shards the first dimension (I) along both the X and Y hardware axes. The number of bytes per device is the same as the previous sharding but the local shape is different. It is now $(\lvert I\rvert /(\lvert X\rvert \cdot \lvert Y\rvert), \lvert J\rvert)$.
 
@@ -136,7 +140,7 @@ Lastly, note that we *cannot* have multiple named axes sharded along the *same* 
 
 ### A quick aside: how would we describe this in code?
 
-JAX uses a named sharding syntax that very closely matches the abstract syntax we describe above. We'll talk more about this in [Section 10](../jax-stuff), but here's a quick preview. You can play with this in a Google Colab and profile the result to see how JAX handles different shardings. This snippet does 3 things:
+JAX uses a named sharding syntax that very closely matches the abstract syntax we describe above. We'll talk more about this in [Section 10](../jax-stuff), but here's a quick preview. You can play with this in a Google Colab [here](https://colab.research.google.com/drive/15cxw66eABwZPG-V4QFmbLfiykPFf_gaP?usp=sharing) and profile the result to see how JAX handles different shardings. This snippet does 3 things:
 
 1. Creates a **jax.Mesh** that maps our 4 TPUs into a 2x2 grid with names ‘X' and ‘Y' assigned to the two axes. 
 2. Creates matrices A and B where A is sharded along both its dimensions and B is sharded along the output dimension. 
@@ -147,9 +151,9 @@ import jax
 import jax.numpy as jnp
 import jax.sharding as shd
 
-# Create our mesh! We're running on a TPU v5e 2x2 slice with names 'X' and 'Y'.
-assert len(jax.devices()) == 4
-mesh = jax.make_mesh(axis_shapes=(2, 2), axis_names=('X', 'Y'))
+# Create our mesh! We're running on a TPU v2-8 4x2 slice with names 'X' and 'Y'.
+assert len(jax.devices()) == 8
+mesh = jax.make_mesh(axis_shapes=(4, 2), axis_names=('X', 'Y'))
 
 # A little utility function to help define our sharding. A PartitionSpec is our
 # sharding (a mapping from axes to names).
@@ -162,7 +166,8 @@ B = jnp.zeros((2048, 8192), dtype=jnp.bfloat16, device=P(None, 'Y'))
 
 # We can perform a matmul on these sharded arrays! out_shardings tells us how we want
 # the output to be sharded. JAX/XLA handles the rest of the sharding for us.
-y = jax.jit(lambda A, B: jnp.einsum('BD,DF->BF', A, B), out_shardings=P('X', 'Y'))(A, B)
+compiled = jax.jit(lambda A, B: jnp.einsum('BD,DF->BF', A, B), out_shardings=P('X', 'Y')).lower(A, B).compile()
+y = compiled(A, B)
 ```
 
 The cool thing about JAX is that these arrays behave as if they're unsharded! `B.shape` will tell us the global or logical shape (2048, 8192). We have to actually look at `B.addressable_shards` to see how it's locally sharded. We can perform operations on these arrays and JAX will attempt to figure out how to broadcast or reshape them to perform the operations. For instance, in the above example, the local shape of **A** is `[4, 1024]` and for **B** is `[2048, 4096]`. JAX/XLA will automatically add communication across these arrays as necessary to perform the final multiplication.

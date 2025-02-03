@@ -462,7 +462,7 @@ You'll notice this generally agrees with the above (minimum around FSDP=256, MP=
 
 ### Pipelining
 
-You'll probably notice we've avoided talking about pipelining at all in the previous sections. Pipelining is a dominant strategy for GPU parallelism that is somewhat less essential on TPUs. Briefly, pipelined training involves splitting the layers of a model across multiple devices and passing the activations between pipeling stages during the forward and backward pass. The algorithm is something like:
+You'll probably notice we've avoided talking about pipelining at all in the previous sections. Pipelining is a dominant strategy for GPU parallelism that is somewhat less essential on TPUs. Briefly, pipelined training involves splitting the layers of a model across multiple devices and passing the activations between pipeline stages during the forward and backward pass. The algorithm is something like:
 
 1. Initialize your data on TPU 0 with your weights sharded across the layer dimension ($W_{in}[L_Z, D_X, F_Y]$ for pipelining with FSDP and tensor parallelism).
 2. Perform the first layer on TPU 0, then copy the resulting activations to TPU 1, and repeat until you get to the last TPU.

@@ -176,11 +176,13 @@ Note that the forward pass has no communication — **it's all in the backward p
 As in the table above, let **C** = per-chip FLOPs, **W** = **bidirectional** network bandwidth, and $$\textbf{X}$$ = number of shards across which the batch is partitioned.  Let's calculate the time required to perform the relevant matmuls, $$T_\text{math}$$, the required communication time $$T_\text{comm}$$.  Since this parallelism scheme requires no communication in the forward pass, we only need to calculate these quantities for the backwards pass.
 
 *Communication time:*  From a previous section we know that the time required to perform an AllReduce in a 1D mesh depends only on the total bytes of the array being AllReduced and the ICI bandwidth $W$; specifically the AllReduce time is $2 \cdot \text{total bytes} / W$. Since we need to AllReduce for both $W_{in}$ and $W_{out}$, we have 2 AllReduces per layer.  Each AllReduce is for a weight matrix, i.e. an array of $DF$ parameters, or $2DF$ bytes. Putting this all together, the total time for the AllReduce in a single layer is 
+
 $$\begin{align}
 T_\text{comm} &= \frac{2 \cdot 2 \cdot 2 \cdot D \cdot F}{W}. \\
 \end{align}$$
 
 *Matmul time:* Each layer comprises two matmuls in the forward pass, or four matmuls in the backwards pass, each of which requires $2(B/X)DF$ FLOPs.  Thus
+
 $$\begin{align}
 T_\text{math} &= \frac{2 \cdot 2 \cdot 2 \cdot B \cdot L \cdot D \cdot F}{X \cdot C} \\
 \end{align}$$
@@ -193,9 +195,11 @@ T &\approx 8 \cdot D \cdot F \cdot \max(\frac{B}{X \cdot C}, \frac{1}{W})
 \end{aligned}$$
 
 We become compute-bound when $$T_\text{math}/T_\text{comm} > 1$$, or when 
+
 $$\begin{align}
-\frac{B}{X} > \frac{C}{W}
+\frac{B}{X} > \frac{C}{W}.
 \end{align}$$
+
 Thus compute-bound operation requires the per-device batch size $$B / X$$ to exceed the operational intensity, $C / W$, of the network chosen for data parallelism.  This was ultimately a consequence of the fact that the computation time scaled with the per-device batch size, while the communication time was independent of this quantity (since we are transferring model weights). Note the resemblance of the $B > XC/W$ condition to the single-device compute-bound rule $B > 240$; in that case as well, the rule came from the fact that computation time scaled with batch size while data-transfer size was (in the $B \ll F, D$ regime) indepdent of batch size.
 
 Let's put in some real numbers to get a sense of scale. For TPUv5p, `C=4.6e14` and `W=2 * 9e10` for 1D data parallelism over ICI, so **our batch size per chip must be at least 2,550 to avoid being communication-bound**. Since we can do data parallelism over multiple axes, if we dedicate all three axes of a TPUv5p pod to pure data parallelism, we 3x our bandwidth **W** and can scale down to only BS=850 per TPU or 7.6M tokens per batch per pod (of 9660 chips)! **This tells us that it's fairly hard to become bottlenecked by pure data parallelism!**

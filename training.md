@@ -152,7 +152,7 @@ We ignore the details of the loss function and abbreviate $\text{Tmp} = W_{in} \
 
 {% enddetails %}
 
-Note that the forward pass has no communication — **it's all in the backward pass**! The backward pass also has the great property that the AllReduces aren't in the "critical path", meaning that each AllReduce can be performed whenever it's convenient and doesn't block you from performing subsequent operations. The overall communication cost _can still bottleneck us_ if it exceeds our total compute cost, but it is much more forgiving from an implementation standpoint. We'll see that model/tensor parallelism doesn't have this property.
+Note that the forward pass has no communication — **it's all in the backward pass**! The backward pass also has the great property that the AllReduces aren't in the "critical path", meaning that each AllReduce can be performed whenever it's convenient and doesn't block you from performing subsequent operations. The overall communication cost _can still bottleneck us_ if it exceeds our total compute cost, but it is much more forgiving from an implementation standpoint. We'll see that model/tensor parallelism doesn't have this property.
 
 **Why do this?** Pure data parallelism reduces activation memory pressure by splitting our activations over the batch dimension, allowing us to almost arbitrarily increase batch size as long as we have more chips to split the batch dimension over. Especially during training when our activations often dominate our memory usage, this is very helpful.
 
@@ -171,7 +171,7 @@ T &\approx \max(\frac{8 \cdot B \cdot L \cdot D \cdot F}{X \cdot C}, \frac{8 \cd
 T &\approx 8 \cdot L \cdot D \cdot F \cdot \max(\frac{B}{X \cdot C}, \frac{1}{W})
 \end{aligned}$$
 
-So by simple properties of the $$\max$$ function, we become compute bound when
+So by simple properties of the $\max$ function, we become compute bound when
 
 $$\begin{align}
 \frac{B}{X \cdot C} > \frac{1}{W}
@@ -248,7 +248,7 @@ For LLaMA-3 70B, which was trained for approximately `6.3e24 (15e12 * 70e9 * 6)`
 
 ### Tensor Parallelism
 
-**Syntax:** $$\text{In}[B, D_Y] *_D W_{in}[D, F_Y] *_F W_{out}[F_Y, D] \rightarrow \text{Out}[B_X, D_Y]$$ (we use $$Y$$ to eventually combine with FSDP)
+**Syntax:** $$\text{In}[B, D_Y] *_D W_{in}[D, F_Y] *_F W_{out}[F_Y, D] \rightarrow \text{Out}[B, D_Y]$$ (we use $$Y$$ to eventually combine with FSDP)
 
 In a fully-sharded data-parallel AllReduce we move the weights across chips. We can also shard the feedforward dimension of the model and move the activations during the layer — this is called "1D model parallelism" or Megatron sharding<d-cite key="megatron"></d-cite>. This can unlock a smaller efficient batch size per pod. The figure below shows an example of a single matrix sharded in this way:
 

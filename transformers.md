@@ -259,7 +259,7 @@ Backpropagation as an algorithm trades memory for compute. Instead of a backward
 
 $$f(x) = \exp(g(x))$$
 
-$$\frac{df}{dx} = \exp(g(x)) = \frac{dg}{dx}$$
+$$\frac{df}{dx} = \exp(g(x)) \cdot \frac{dg}{dx}$$
 
 so to avoid recomputing we need to save $$g(x)$$ and $$\exp(g(x))$$ from the forward pass. To avoid saving this much memory, we can choose to only save some fraction of the intermediate activations. Here are a few strategies we use.
 

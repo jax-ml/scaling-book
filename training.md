@@ -165,10 +165,10 @@ Note that the forward pass has no communication — **it's all in the backward 
 **When do we become bottlenecked by communication?** As we can see above, we have two AllReduces per layer, each of size $$2DF$$ (for bf16 weights). When does data parallelism make us communication bound? Let **C** = per-chip FLOPs, **W** = **bidirectional** network bandwidth, and $$\textbf{X}$$ = number of shards across which the batch is partitioned.  Consider the total $$T_\text{math}$$ and $$T_\text{comm}$$ for the backward pass only (forward pass has no communication). The cost of an AllReduce is approximately $$2 \cdot X \cdot \text{total bytes} / (W \cdot X) \approxeq 2 * \text{total bytes} / W$$.
 
 $$\begin{aligned}
-T_{math} &= \frac{2 \cdot 2 \cdot B \cdot L \cdot D \cdot F}{X \cdot C} \\
-T_{comm} &= \frac{2 \cdot 2 \cdot L \cdot D \cdot F}{W} \\
-T &\approx \max(\frac{4 \cdot B \cdot L \cdot D \cdot F}{X \cdot C}, \frac{4 \cdot L \cdot D \cdot F}{W}) \\
-T &\approx 4 \cdot L \cdot D \cdot F \cdot \max(\frac{B}{X \cdot C}, \frac{1}{W})
+T_{math} &= \frac{2 \cdot 2 \cdot 2 \cdot B \cdot L \cdot D \cdot F}{X \cdot C} \\
+T_{comm} &= \frac{2 \cdot 2 \cdot 2 \cdot L \cdot D \cdot F}{W} \\
+T &\approx \max(\frac{8 \cdot B \cdot L \cdot D \cdot F}{X \cdot C}, \frac{8 \cdot L \cdot D \cdot F}{W}) \\
+T &\approx 8 \cdot L \cdot D \cdot F \cdot \max(\frac{B}{X \cdot C}, \frac{1}{W})
 \end{aligned}$$
 
 So by simple properties of the $$\max$$ function, we become compute bound when

@@ -249,19 +249,19 @@ This is also called "ZeRO Sharding", from "ZeRo Overhead sharding" since we don'
 **When do we become bottlenecked by communication?** Our relative FLOPs and comms costs are exactly the same as pure data parallelism, since each AllReduce in the backward pass has become an AllGather + ReduceScatter. Recall that an AllReduce is implemented as an AllGather and a ReduceScatter, each with half the cost. Here we model the forward pass since it has the same FLOPs-to-comms ratio as the backward pass: 
 
 $$\begin{aligned}
-T_{math} &= \frac{2 \cdot 2 \cdot B \cdot L \cdot D \cdot F}{X \cdot C} \\
-T_{comm} &= \frac{2 \cdot 2 \cdot L \cdot D \cdot F}{W} \\
-T &\approx \max\left(\frac{4 \cdot B \cdot L \cdot D \cdot F}{X \cdot C}, \frac{4 \cdot L \cdot D \cdot F}{W}\right) \\
-T &\approx 4 \cdot L \cdot D \cdot F \cdot \max\left(\frac{B}{X \cdot C}, \frac{1}{W}\right)
+T_{math} &= \frac{2 \cdot 2 \cdot B \cdot D \cdot F}{X \cdot C} \\
+T_{comm} &= \frac{2 \cdot 2 \cdot D \cdot F}{W} \\
+T &\approx \max\left(\frac{4 \cdot B \cdot D \cdot F}{X \cdot C}, \frac{4 \cdot D \cdot F}{W}\right) \\
+T &\approx 4 \cdot D \cdot F \cdot \max\left(\frac{B}{X \cdot C}, \frac{1}{W}\right)
 \end{aligned}$$
 
-Again, we are compute bound when $$B / X < C / W = 2550$$, where 2550 is the operational intensity of ICI. As expected, we have the same overall cost! So it's the same as data parallelism, but we just saved ourselves a massive amount of parameter and optimizer state memory!
+As with the fully data-parallel scheme, we are compute bound when $$B / X > C / W$$, i.e. when the per-device batch size $B/X$ exceeds the "ICI operational intensity" $C/W$, which was 2550 for a TPUv5p. Because this compute-bound condition is the same in both cases (data-parallelism and FSDP), if we have a per-device batch size which gets us into the compute-bound regime for the purely data-parallel scheme, we can---without worrying about leaving the compute-bound regime---add FSDP and save ourselves a massive amount of parameter and optimizer state memory! The cost we have to pay to get this memory savings---extra communication in the forward pass---is immaterial, since we just overlap it with forward-pass FLOPs.
 
 <p markdown=1 class="takeaway">**Takeaway:** both FSDP and pure data parallelism become bandwidth bound on TPUv5 when the batch size per device is less than $2550 / n_\text{axes}$.</p>
 
 For example, DeepSeek-V2 (one of the only recent strong model to release information about its training batch size) used a batch size of ~40M tokens. **This would allow us to scale to roughly 47,000 chips, or around 5 TPUv5 pods, before we hit a bandwidth limit.**
 
-<p markdown=1 class="takeaway">**Note**: somewhat unintuitively, we become more communication bottlenecked as our batch size goes down. Data parallelism lets us scale to arbitrary chips so long as we can keep increasing our batch size! However, in practice, as our batch size increases, we tend to see diminishing returns in training since our gradients become almost noise-free. We also sometimes see training instability. Thus, the game of finding an optimal sharding scheme in the "unlimited compute regime" often starts from a fixed batch size, determined by scaling laws, and a known (large) number of chips, and then aims to find a partitioning that allows us to fit that small batch size on so many chips.</p>
+<p markdown=1 class="takeaway">**Note**: somewhat unintuitively, we become more communication bottlenecked as our total batch size decreases (with fixed chip number). Data parallelism and FSDP let us scale to arbitrarily many chips so long as we can keep increasing our batch size! However, in practice, as our batch size increases, we tend to see diminishing returns in training since our gradients become almost noise-free. We also sometimes see training instability. Thus, the game of finding an optimal sharding scheme in the "unlimited compute regime" often starts from a fixed batch size, determined by scaling laws, and a known (large) number of chips, and then aims to find a partitioning that allows us to fit that small batch size on so many chips.</p>
 
 For LLaMA-3 70B, which was trained for approximately `6.3e24 (15e12 * 70e9 * 6)` FLOPs, we could split a batch of 16M tokens over roughly `16e6 / (2550 / 3) = 18,823` chips (roughly 2 pods of 8960 chips), each with `4.59e14` FLOPs running at 50% peak FLOPs utilization (often called MFU), and **train it in approximately 17 days**. Not bad! But let's explore how we can do better.
 

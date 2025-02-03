@@ -193,7 +193,7 @@ Fully-sharded data parallelism (often called FSDP or ZeRO-sharding<d-cite key="z
 
 You'll remember (from [Section 3](../sharding)) that an AllReduce can be decomposed into an AllGather and a ReduceScatter. This means that, instead of doing the full gradient AllReduce for standard data parallelism, we can shard the weights and optimizer states across chips, AllGather them at each layer during the forward pass and ReduceScatter across the weights during the backward pass at no extra cost. 
 
-{% details Here's the algorithm: %}
+{% details Here's the full algorithm for FSDP. %}
 
 <div markdown=1 class="algorithm">
 
@@ -330,7 +330,7 @@ The nice thing about FSDP and tensor parallelism is that they can be combined. B
 
 {% include figure.liquid path="assets/img/mixed-fsdp-model-parallelism.png" class="img-fluid" caption="<b>Figure:</b> a diagram combining FSDP and tensor parallelism. Unlike the other cases, there is no duplication of model parameters." %}
 
-{% details Here's the full algorithm. While we have a lot of communication, all our AllGathers and ReduceScatters are smaller because we have batch-sharded our activations and tensor sharded our weights much more! %}
+{% details Here's the full algorithm for mixed FSDP + tensor parallelism. While we have a lot of communication, all our AllGathers and ReduceScatters are smaller because we have batch-sharded our activations and tensor sharded our weights much more! %}
 
 <div markdown=1 class="algorithm">
 

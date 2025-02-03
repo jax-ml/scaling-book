@@ -167,9 +167,9 @@ For TPU v5e and Trillium we have pods which consist of a `16x16` 2D torus. TPUs 
 
 * **Within a slice, TPUs are only connected to their nearest neighbors via ICI.** This means communication over ICI between distant chips in a slice needs to hop over the intervening chips first.
 
-* **Weight matrices need to be padded to at least size 128** (256 on TPU v6) in all dimensions to fill up the MXU (in fact, smaller axes are padded to 128).
+* **Weight matrices need to be padded to at least size 128** (256 on TPU v6) in both dimensions to fill up the MXU (in fact, smaller axes are padded to 128).
 
-* **Lower precision matrix multiplication tends to be faster.** TPUs can do int8 or `int4` FLOPs roughly 2x/4x faster than bfloat16 FLOPs for generations that support it. VPU operations are still performed in fp32.
+* **Lower precision matrix multiplication tends to be faster.** TPUs can do int8 or int4 FLOPs roughly 2x/4x faster than bfloat16 FLOPs for generations that support it. VPU operations are still performed in fp32.
 
 * To avoid bottlenecking the TPU compute unit, we need to **make sure the amount of communication across each channel is proportional to its speed**.
 

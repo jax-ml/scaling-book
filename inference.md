@@ -326,7 +326,7 @@ This also effectively increases the arithmetic intensity of the attention comput
 {% include figure.liquid path="assets/img/kv-sharing.png" class="img-fluid" caption="
  <b>Left:</b> Multiple layers of pure global attention. <b>Right:</b> An example of some global/local interleaving pattern with sharing with adjacent layers. Source: <a href=\"https://research.character.ai/optimizing-inference/?ref=blog.character.ai\">Character.ai blog</a>."%}
 
-**Quantization:** Inference is usually less sensitive to the precision of parameters and KVs. By quantizing the parameters and KV cache (e.g. to int8, `int4`, `fp8` etc.), we can save on memory bandwidth on both, decrease the batch size required to reach the compute roofline and save memory to run at bigger batch sizes. Quantization has the added advantage that even if the model was not trained with quantization it can often be applied post training.
+**Quantization:** Inference is usually less sensitive to the precision of parameters and KVs. By quantizing the parameters and KV cache (e.g. to int8, int4, `fp8` etc.), we can save on memory bandwidth on both, decrease the batch size required to reach the compute roofline and save memory to run at bigger batch sizes. Quantization has the added advantage that even if the model was not trained with quantization it can often be applied post training.
 
 **Using ragged HBM reads and Paged Attention:** We allocated 8k of context for each KV cache in the calculations above but it is often not necessary to read the entire KV cache from memory — requests have a wide range of length distributions and don't use the max context of the model, so we can often implement kernels (e.g. Flash Attention variants) that only read the non-padding part of the KV cache.
 

@@ -104,7 +104,7 @@ $$\begin{equation}
 \text{FFW blocks are compute bound when } B > 240
 \end{equation}$$
 
-assuming we use bfloat16 (or in general, if we store our parameters in the same dtype we use for computation). If we quantize our weights to int8 or `int4` but do bfloat16 matmuls, this drops to 120 or 60, respectively. This holds for pretty much all models of interest.
+assuming we use bfloat16 (or in general, if we store our parameters in the same dtype we use for computation). If we quantize our weights to int8 or int4 but do bfloat16 matmuls, this drops to 120 or 60, respectively. This holds for pretty much all models of interest.
 
 **How realistic is this?** Larger batch sizes than this will still see some improvement in throughput because of imperfect overlapping, but this is a good heuristic. Note also that our assumption that communication will be perfectly overlapped with compute is not realistic, since XLA is quite fallible. In particular, XLA sometimes fails to overlap the ICI communication of our model-sharded matmuls with the FLOPs themselves, so we actually start taking a latency hit over $$BS=32$$.
 
@@ -128,7 +128,7 @@ $$\text{KV cache size per token in int8} = 2 * K * H * L = 2 * 8 * 128 * 80 = 16
 
 {% enddetails %}
 
-**Question:** What is the smallest slice we could serve on in bfloat16, int8, and `int4` (both KVs and parameters)? You can assume batch size 1 and 8k context.
+**Question:** What is the smallest slice we could serve on in bfloat16, int8, and int4 (both KVs and parameters)? You can assume batch size 1 and 8k context.
 
 {% details Click here once you've thought it through! %}
 
@@ -148,7 +148,7 @@ That's pretty cool! It tells us we could fit LLaMA 70B on a TPU v5e 2x2 if we wa
 
 {% details Click here once you've thought it through! %}
 
-This is also easy, since we're picking our batch size to fill up all our HBM! This is just a question of how long it takes to load a full TPU v5e's worth of bytes into the MXU. This is just `v5e HBM / v5e HBM memory bandwidth = 16GB / 8.2e11 = 19ms`, so this is **19ms / step**. Assuming our generations have a median length of 512 tokens, that is about 9s for each decode. Note that we could get marginally better latency with a smaller batch size, for instance if we only looked at model parameters in `int4` our minimum latency is about 10ms / step, since HBM is no longer full.
+This is also easy, since we're picking our batch size to fill up all our HBM! This is just a question of how long it takes to load a full TPU v5e's worth of bytes into the MXU. This is just `v5e HBM / v5e HBM memory bandwidth = 16GB / 8.2e11 = 19ms`, so this is **19ms / step**. Assuming our generations have a median length of 512 tokens, that is about 9s for each decode. Note that we could get marginally better latency with a smaller batch size, for instance if we only looked at model parameters in int4 our minimum latency is about 10ms / step, since HBM is no longer full.
 
 {% enddetails %}
 
@@ -198,7 +198,7 @@ $$Y > \frac{F \cdot n_\text{axes}}{2550}$$
 
 although this will depend slightly on the dtype of the computation. For instance, above we have `F = 28,672`, so if we do 2 axes of model sharding this gives us roughly $$Y = 28672 \cdot 2 / 2550 = 22$$, so in general we could scale up to 16 chips, which lets us use a 4x4 but not a 4x8. Generally, since we do not perfectly overlap computation, even this estimate is overly optimistic. **Takeaway: we can't actually serve on a 4x8 with pure model parallelism.** The best we can do here is a 4x2 or _maybe_ a 4x4.
 
-However, if we look at the int8 and `int4` configs, we _can_ do those with pure model parallelism. So we've hit a point at which quantization actually gives us a meaningful advantage beyond faster FLOPs: it lets us use a larger batch size before we become comms-bound. **So the end of this story is that we can't actually serve on a 4x8 efficiently, but for the int8 and `int4` configs we could do pure model parallelism*. Data parallelism is basically never useful because it replicates the parameters and we'd be better off with a smaller overall topology.
+However, if we look at the int8 and int4 configs, we _can_ do those with pure model parallelism. So we've hit a point at which quantization actually gives us a meaningful advantage beyond faster FLOPs: it lets us use a larger batch size before we become comms-bound. **So the end of this story is that we can't actually serve on a 4x8 efficiently, but for the int8 and int4 configs we could do pure model parallelism*. Data parallelism is basically never useful because it replicates the parameters and we'd be better off with a smaller overall topology.
 
 {% enddetails %}
 

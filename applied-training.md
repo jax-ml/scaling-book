@@ -163,11 +163,11 @@ You notice that gradient checkpointing strongly dominates the memory picture, ev
 
 Let's stick to our setting from above and say we want to train LLaMA 3-70B with 4M token batch size (1024 sequences of length 8192 per batch) on a TPU v5p pod of 8960 chips. Let's discuss what the best sharding strategy is for this model.
 
-**Question:** Can we just do pure FSDP? This should be the first idea you have, since it's simple and will introduce no extra complexity if it works.
+**Question:** Can we just do pure FSDP? This should be the first idea you have, since it's simple and will introduce no extra communication if it works.
 
 {% details Click here for the answer, once you've thought about it! %}
 
-**Answer**: This depends a bit on our sequence length and what we mean by FSDP. LLaMA 3-70B is initially trained with 4K sequences, so at this sequence length a batch size of 4M tokens gives us a *sequence batch size* of 1024. That means we can only really do pure data parallelism/FSDP up to 1024 chips. So the answer in the simple sense of "pure data parallelism with no extra communication" is no. The next question will answer a slightly less pedantic version of this.
+**Answer**: This depends a bit on our sequence length and what we mean by FSDP. LLaMA 3-70B is initially trained with sequences of length 4K, so at this sequence length a batch size of 4M tokens gives us a *sequence batch size* of 1024. That means we can only really do pure data parallelism/FSDP up to 1024 chips. So the answer in the simple sense of "pure data parallelism with no extra communication" is no. The next question will answer a slightly less pedantic version of this.
 
 {% enddetails %}
 

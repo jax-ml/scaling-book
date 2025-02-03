@@ -81,21 +81,26 @@ _styles: >
 
 ## What Do We Mean By Scaling?
 
-The goal of “model scaling” is to be able to increase the number of chips used for training or inference while achieving a proportional, linear increase in throughput. We call this *strong scaling*”. This is difficult to achieve because increasing the number of chips increases the communication load while reducing the amount of per-device computation we can use to hide it. As we saw in [Section 3](../sharding), sharded matrix multiplications often require expensive AllGathers or ReduceScatters that can block the TPUs from doing useful work. The goal of this section is to find out when these become *too expensive.*<d-footnote>While performance on a single chip depends on the trade-off between memory bandwidth and FLOPs, performance at the cluster level depends on hiding inter-chip communication by overlapping it with useful FLOPS.</d-footnote>
+As we entioned in the introduction, our goal when training with multiple chips is to achieve *strong scaling*, which means we can increase the number of chips and achieve a proportional, linear increase in throughput.  Whereas in the single-chip setting, we needed to be careful to structure our computation such that we could overlap computation with loading parameters from the chip's memory, here in the multi-chip setting we will need to structure our computation such that we can also overlap computation with inter-chip communication.  This is non-trivial, because as we increase the number of chips we use, we increase the communication load while reducing the amount of per-device computation we can use to hide this communication.  As we saw in [Section 3](../sharding), sharded matrix multiplications often require expensive AllGathers or ReduceScatters that can block the TPUs from doing useful work. The goal of this section is to find out when these become *too expensive.* To repeat: while performance on a single chip depends on the trade-off between memory bandwidth and FLOPs, performance at the cluster level depends on hiding inter-chip communication by overlapping it with useful FLOPs.
 
-In this section, we'll discuss four common parallelism schemes: (pure) **data parallelism, fully-sharded data parallelism** (FSDP / ZeRO sharding), **tensor parallelism**, and (briefly) **pipeline parallelism**. For each, we'll show what communication cost we incur and at what point that cost starts to bottleneck our compute cost.<d-footnote>We'll focus on communication bounds — since while memory capacity constraints are important, they typically do not bound us when using rematerialization (activation checkpointing) and a very large number of chips during pre-training. We also do not discuss expert parallelism here for MoEs — which expands the design space substantially, only the base case of a dense Transformer.</d-footnote> We'll use the following notation to simplify calculations throughout this section.
+In this section, we'll discuss four common parallelism schemes: (pure) **data parallelism, fully-sharded data parallelism** (FSDP / ZeRO sharding), **tensor parallelism** (also known as model parallelism), and (briefly) **pipeline parallelism**. For each, we'll show what communication cost we incur and at what point that cost starts to bottleneck our compute cost.<d-footnote>We'll focus on communication bounds — since while memory capacity constraints are important, they typically do not bound us when using rematerialization (activation checkpointing) and a very large number of chips during pre-training. We also do not discuss expert parallelism here for MoEs — which expands the design space substantially, only the base case of a dense Transformer.</d-footnote> For this section, you can focus solely on inter-chip communication costs, since as long as we have a large enough single-chip batch size (greater than roughly 240 tokens, as described previously), the transfer of data from a single chip's memory to computation unit is already overlapped with computation.
 
-| Notation | Meaning                                                                    |
+We'll use the following notation to simplify calculations throughout this section.
+
+| Notation | Meaning (model parameters)                                                 |
 | :------- | :------------------------------------------------------------------------- |
 | D        | **d**<sub>model</sub> ( the hidden dimension/residual stream dim)          |
 | F        | **d**<sub>ff</sub> (the feed-forward dimension)                            |
 | B        | Batch dimension (total number of tokens in the batch)                      |
 | T        | Sequence length                                                            |
 | L        | Number of layers in the model                                              |
-| C        | FLOPS per chip                                                             |
-| X        | Number of chips along a mesh axis                                          |
-| Y        | Number of chips along an alternate mesh axis                               |
-| Z        | Number of chips along a third mesh axis                                    |
+
+| Notation | Meaning (hardware characteristic)                                          |
+| :------- | :------------------------------------------------------------------------- |
+| C        | FLOPS/s per chip                                                           |
+| X        | Number of chips along mesh axis X                                          |
+| Y        | Number of chips along an alternate mesh axis, labeled Y                    |
+| Z        | Number of chips along a third mesh axis, labeled Z                         |
 | W        | Network bandwidth (bidirectional, often subscripted; e.g. W<sub>ICI</sub>) |
 
 For simplicity's sake, **we'll approximate a Transformer as a stack of MLP blocks** — attention is a comparatively small fraction of the FLOPs for larger models as we saw in [Section 4](../transformers). We will also ignore the gating matmul, leaving us with the following simple structure for each layer:

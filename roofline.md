@@ -10,7 +10,7 @@ hidden: false
 
 section_number: 1
 
-previous_section_url: "../index"
+previous_section_url: ".."
 previous_section_name: "Part 0: Introduction"
 
 next_section_url: ../tpus

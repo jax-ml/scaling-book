@@ -16,7 +16,7 @@ section_number: 0
 previous_section_url: ""
 previous_section_name: "Part 0: Intro"
 
-next_section_url: ../roofline
+next_section_url: roofline
 next_section_name: "Part 1: Rooflines"
 
 bibliography: main.bib
@@ -98,30 +98,30 @@ Three or four years ago, I don't think most ML researchers would have needed to 
 
 The overall structure of this set of tutorials is as follows:
 
-[Section 1](../roofline) explains roofline analysis and what factors can limit our ability to scale (communication, computation, and memory). [Section 2](../tpus) and [Section 3](../sharding) talk in detail about how TPUs and modern GPUs work, both as individual chips and — of critical importance — as an interconnected system with inter-chip links of limited bandwidth and latency. We'll answer questions like:
+[Section 1](roofline) explains roofline analysis and what factors can limit our ability to scale (communication, computation, and memory). [Section 2](tpus) and [Section 3](sharding) talk in detail about how TPUs and modern GPUs work, both as individual chips and — of critical importance — as an interconnected system with inter-chip links of limited bandwidth and latency. We'll answer questions like:
 
 * How long should a matrix multiply of a certain size take? At what point is it bound by compute or by memory or communication bandwidth?
 * How are TPUs wired together to form training clusters? How much bandwidth does each part of the system have?
 * How long does it take to gather, scatter, or re-distribute arrays across multiple TPUs?
 * How do we efficiently multiply matrices that are distributed differently across devices?
 
-{% include figure.liquid path="assets/img/pointwise-product.gif" class="img-small" caption="<b>Figure:</b> a diagram from <a href=\"../tpus\">Section 2</a> showing how a TPU performs an elementwise product. Depending on the size of our arrays and the bandwidth of various links, we can find ourselves compute-bound (using the full hardware compute capacity) or comms-bound (bottlenecked by memory loading)." %}
+{% include figure.liquid path="assets/img/pointwise-product.gif" class="img-small" caption="<b>Figure:</b> a diagram from <a href=\"tpus\">Section 2</a> showing how a TPU performs an elementwise product. Depending on the size of our arrays and the bandwidth of various links, we can find ourselves compute-bound (using the full hardware compute capacity) or comms-bound (bottlenecked by memory loading)." %}
 
-Five years ago ML had a colorful landscape of architectures — ConvNets, LSTMs, MLPs, Transformers — but now we mostly just have the Transformer<d-cite key="transformers"></d-cite>. We strongly believe it's worth understanding every piece of the Transformer architecture: the exact sizes of every matrix, where normalization occurs, how many parameters and FLOPs<d-footnote>FLoating point OPs, basically the total number of adds and multiplies required. While many sources take FLOPs to mean "operations per second", we use FLOPs/s to indicate that explicitly.</d-footnote> are in each part. [Section 4](../transformers) goes through this “Transformer math” carefully, showing how to count the parameters and FLOPs for both training and inference. This tells us how much memory our model will use, how much time we'll spend on compute or comms, and when attention will become important relative to the feed-forward blocks.
+Five years ago ML had a colorful landscape of architectures — ConvNets, LSTMs, MLPs, Transformers — but now we mostly just have the Transformer<d-cite key="transformers"></d-cite>. We strongly believe it's worth understanding every piece of the Transformer architecture: the exact sizes of every matrix, where normalization occurs, how many parameters and FLOPs<d-footnote>FLoating point OPs, basically the total number of adds and multiplies required. While many sources take FLOPs to mean "operations per second", we use FLOPs/s to indicate that explicitly.</d-footnote> are in each part. [Section 4](transformers) goes through this “Transformer math” carefully, showing how to count the parameters and FLOPs for both training and inference. This tells us how much memory our model will use, how much time we'll spend on compute or comms, and when attention will become important relative to the feed-forward blocks.
 
-{% include figure.liquid path="assets/img/transformer-diagram.png" class="img-fluid" caption="<b>Figure:</b> a standard Transformer layer with each matrix multiplication (matmul) shown as a dot inside a circle. All parameters (excluding norms) are shown in purple. <a href=\"../transformers\">Section 4</a> walks through this diagram in more detail." %}
+{% include figure.liquid path="assets/img/transformer-diagram.png" class="img-fluid" caption="<b>Figure:</b> a standard Transformer layer with each matrix multiplication (matmul) shown as a dot inside a circle. All parameters (excluding norms) are shown in purple. <a href=\"transformers\">Section 4</a> walks through this diagram in more detail." %}
 
-[Section 5: Training](../training) and [Section 7: Inference](../inference) are the core of this essay, where we discuss the fundamental question: given a model of some size and some number of chips, how do I parallelize my model to stay in the “strong scaling” regime? This is a simple question with a surprisingly complicated answer. At a high level, there are 4 primary parallelism techniques used to split models over multiple chips (**data**, **tensor**, **pipeline** and **expert**), and a number of other techniques to reduce the memory requirements (**rematerialisation**, **optimizer/model sharding (aka ZeRO)**, **host offload**, **gradient accumulation**). We discuss many of these here.
+[Section 5: Training](training) and [Section 7: Inference](inference) are the core of this essay, where we discuss the fundamental question: given a model of some size and some number of chips, how do I parallelize my model to stay in the “strong scaling” regime? This is a simple question with a surprisingly complicated answer. At a high level, there are 4 primary parallelism techniques used to split models over multiple chips (**data**, **tensor**, **pipeline** and **expert**), and a number of other techniques to reduce the memory requirements (**rematerialisation**, **optimizer/model sharding (aka ZeRO)**, **host offload**, **gradient accumulation**). We discuss many of these here.
 
-We hope by the end of these sections you should be able to choose among them yourself for new architectures or settings. [Section 6](../applied-training) and [Section 8](../applied-inference) are practical tutorials that apply these concepts to LLaMA-3, a popular open-source model.
+We hope by the end of these sections you should be able to choose among them yourself for new architectures or settings. [Section 6](applied-training) and [Section 8](applied-inference) are practical tutorials that apply these concepts to LLaMA-3, a popular open-source model.
 
-Finally, [Section 9](../profiling) and [Section 10](../jax-stuff) look at how to implement some of these ideas in JAX and how to profile and debug your code when things go wrong.
+Finally, [Section 9](profiling) and [Section 10](jax-stuff) look at how to implement some of these ideas in JAX and how to profile and debug your code when things go wrong.
 
 Throughout we try to give you problems to work for yourself. Please feel no pressure to read all the sections or read them in order. And please leave feedback. For the time being, this is a draft and will continue to be revised. Thank you!
 
 *We'd like to acknowledge James Bradbury and Reiner Pope who derived many of the ideas in this doc but have since left Google.*
 
-<h3 markdown=1 class="next-section">Without further ado, [here is Section 1](../roofline) about TPU rooflines.</h3>
+<h3 markdown=1 class="next-section">Without further ado, [here is Section 1](roofline) about TPU rooflines.</h3>
 
 ## Links to Sections
 
@@ -129,28 +129,28 @@ Throughout we try to give you problems to work for yourself. Please feel no pres
 
 **Part 1: Preliminaries**
 
-* [**Chapter 1: A Brief Intro to Roofline Analysis**](../roofline). Algorithms are bounded by three things: compute, communication, and memory. We can use these to approximate how fast our algorithms will run.
+* [**Chapter 1: A Brief Intro to Roofline Analysis**](roofline). Algorithms are bounded by three things: compute, communication, and memory. We can use these to approximate how fast our algorithms will run.
 
-* [**Chapter 2: How to Think About TPUs**](../tpus). How do TPUs work? How does that affect what models we can train and serve?
+* [**Chapter 2: How to Think About TPUs**](tpus). How do TPUs work? How does that affect what models we can train and serve?
 
-* [**Chapter 3: Sharded Matrices and How to Multiply Them**](../sharding). Here we explain model sharding and multi-TPU parallelism by way of our favorite operation: (sharded) matrix multiplications.
+* [**Chapter 3: Sharded Matrices and How to Multiply Them**](sharding). Here we explain model sharding and multi-TPU parallelism by way of our favorite operation: (sharded) matrix multiplications.
 
 **Part 2: Transformers**
 
-* [**Chapter 4: All the Transformer Math You Need to Know**](../transformers). How many FLOPs does a Transformer use in its forward and backwards pass? Can you calculate the number of parameters? The size of its KV caches? We work through this math here.
+* [**Chapter 4: All the Transformer Math You Need to Know**](transformers). How many FLOPs does a Transformer use in its forward and backwards pass? Can you calculate the number of parameters? The size of its KV caches? We work through this math here.
 
-* [**Chapter 5: How to Parallelize a Transformer for Training**](../training). FSDP. Megatron sharding. Pipeline parallelism. Given some number of chips, how do I train a model of a given size with a given batch size as efficiently as possible?
+* [**Chapter 5: How to Parallelize a Transformer for Training**](training). FSDP. Megatron sharding. Pipeline parallelism. Given some number of chips, how do I train a model of a given size with a given batch size as efficiently as possible?
 
-* [**Chapter 6: Training LLaMA 3 on TPUs**](../applied-training). How would we train LLaMA 3 on TPUs? How long would it take? How much would it cost?
+* [**Chapter 6: Training LLaMA 3 on TPUs**](applied-training). How would we train LLaMA 3 on TPUs? How long would it take? How much would it cost?
 
-* [**Chapter 7: All About Transformer Inference**](../inference). Once we've trained a model, we have to serve it. Inference adds a new consideration — latency — and changes up the memory landscape. We'll talk about how disaggregated serving works and how to think about KV caches.
+* [**Chapter 7: All About Transformer Inference**](inference). Once we've trained a model, we have to serve it. Inference adds a new consideration — latency — and changes up the memory landscape. We'll talk about how disaggregated serving works and how to think about KV caches.
 
-* [**Chapter 8: Serving LLaMA 3 on TPUs**](../applied-inference). How much would it cost to serve LLaMA 3 on TPU v5e? What are the latency/throughput tradeoffs?
+* [**Chapter 8: Serving LLaMA 3 on TPUs**](applied-inference). How much would it cost to serve LLaMA 3 on TPU v5e? What are the latency/throughput tradeoffs?
 
 **Part 3: Practical Tutorials**
 
-* [**Chapter 9: How to Profile TPU Code**](../profiling). Real LLMs are never as simple as the theory above. Here we explain the JAX + XLA stack and how to use the JAX/TensorBoard profiler to debug and fix real issues.
+* [**Chapter 9: How to Profile TPU Code**](profiling). Real LLMs are never as simple as the theory above. Here we explain the JAX + XLA stack and how to use the JAX/TensorBoard profiler to debug and fix real issues.
 
-* [**Chapter 10: Programming TPUs in JAX**](../jax-stuff). JAX provides a bunch of magical APIs for parallelizing computation, but you need to know how to use them. Fun examples and worked problems.
+* [**Chapter 10: Programming TPUs in JAX**](jax-stuff). JAX provides a bunch of magical APIs for parallelizing computation, but you need to know how to use them. Fun examples and worked problems.
 
-* [**Chapter 11: Conclusions and Further Reading**](../conclusion). Closing thoughts and further reading on TPUs and LLMs.
+* [**Chapter 11: Conclusions and Further Reading**](conclusion). Closing thoughts and further reading on TPUs and LLMs.

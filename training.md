@@ -91,7 +91,7 @@ We'll use the following notation to simplify calculations throughout this sectio
 | :------- | :------------------------------------------------------------------------- |
 | D        | **d**<sub>model</sub> ( the hidden dimension/residual stream dim)          |
 | F        | **d**<sub>ff</sub> (the feed-forward dimension)                            |
-| B        | Batch dimension (total number of tokens in the batch)                      |
+| B        | Batch dimension (number of tokens in the batch; total, not per-device)     |
 | T        | Sequence length                                                            |
 | L        | Number of layers in the model                                              |
 
@@ -171,24 +171,34 @@ Note that the forward pass has no communication — **it's all in the backward p
 
 *To make this useful for real models during training, we'll need to at least partly shard the model parameters or optimizer.*
 
-**When do we become bottlenecked by communication?** As we can see above, we have two AllReduces per layer, each of size $$2DF$$ (for bf16 weights). When does data parallelism make us communication bound? Let **C** = per-chip FLOPs, **W** = **bidirectional** network bandwidth, and $$\textbf{X}$$ = number of shards across which the batch is partitioned.  Consider the total $$T_\text{math}$$ and $$T_\text{comm}$$ for the backward pass only (forward pass has no communication). The cost of an AllReduce is approximately $$2 \cdot X \cdot \text{total bytes} / (W \cdot X) \approxeq 2 * \text{total bytes} / W$$.
+**When do we become bottlenecked by communication?** As we can see above, we have two AllReduces per layer, each of size $$2DF$$ (for bf16 weights). When does data parallelism make us communication bound? 
 
-$$\begin{aligned}
-T_{math} &= \frac{2 \cdot 2 \cdot 2 \cdot B \cdot L \cdot D \cdot F}{X \cdot C} \\
-T_{comm} &= \frac{2 \cdot 2 \cdot 2 \cdot L \cdot D \cdot F}{W} \\
-T &\approx \max(\frac{8 \cdot B \cdot L \cdot D \cdot F}{X \cdot C}, \frac{8 \cdot L \cdot D \cdot F}{W}) \\
-T &\approx 8 \cdot L \cdot D \cdot F \cdot \max(\frac{B}{X \cdot C}, \frac{1}{W})
-\end{aligned}$$
+As in the table above, let **C** = per-chip FLOPs, **W** = **bidirectional** network bandwidth, and $$\textbf{X}$$ = number of shards across which the batch is partitioned.  Let's calculate the time required to perform the relevant matmuls, $$T_\text{math}$$, the required communication time $$T_\text{comm}$$.  Since this parallelism scheme requires no communication in the forward pass, we only need to calculate these quantities for the backwards pass.
 
-So by simple properties of the $\max$ function, we become compute bound when
-
+*Communication time:*  From a previous section we know that the time required to perform an AllReduce in a 1D mesh depends only on the total bytes of the array being AllReduced and the ICI bandwidth $W$; specifically the AllReduce time is $2 \cdot \text{total bytes} / W$. Since we need to AllReduce for both $W_{in}$ and $W_{out}$, we have 2 AllReduces per layer.  Each AllReduce is for a weight matrix, i.e. an array of $DF$ parameters, or $2DF$ bytes. Putting this all together, the total time for the AllReduce in a single layer is 
 $$\begin{align}
-\frac{B}{X \cdot C} > \frac{1}{W}
+T_\text{comm} &= \frac{2 \cdot 2 \cdot 2 \cdot D \cdot F}{W}. \\
 \end{align}$$
 
-Put in words, we become communication bound when the operational intensity for the network chosen for data parallelism $C / W$ is greater than the per-chip batch size $$B / X$$.
+*Matmul time:* Each layer comprises two matmuls in the forward pass, or four matmuls in the backwards pass, each of which requires $2(B/X)DF$ FLOPs.  Thus
+$$\begin{align}
+T_\text{math} &= \frac{2 \cdot 2 \cdot 2 \cdot B \cdot L \cdot D \cdot F}{X \cdot C} \\
+\end{align}$$
 
-For TPUv5p, `C=4.6e14` and `W=2 * 9e10` for 1D data parallelism over ICI, so **our batch size per chip must be at least 2,550 to avoid being communication-bound**. Since we can do data parallelism over multiple axes, if we dedicate all three axes of a TPUv5p pod to pure data parallelism, we 3x our bandwidth **W** and can scale down to only BS=850 per TPU or 7.6M tokens per batch per pod (of 9660 chips)! **This tells us that it's fairly hard to become bottlenecked by pure data parallelism!**
+Since we overlap, the total time per layer is the max of these two quantities:
+
+$$\begin{aligned}
+T &\approx \max(\frac{8 \cdot B \cdot D \cdot F}{X \cdot C}, \frac{8 \cdot D \cdot F}{W}) \\
+T &\approx 8 \cdot D \cdot F \cdot \max(\frac{B}{X \cdot C}, \frac{1}{W})
+\end{aligned}$$
+
+We become compute-bound when $$T_\text{math}/T_\text{comm} > 1$$, or when 
+$$\begin{align}
+\frac{B}{X} > \frac{C}{W}
+\end{align}$$
+Thus compute-bound operation requires the per-device batch size $$B / X$$ to exceed the operational intensity, $C / W$, of the network chosen for data parallelism.  This was ultimately a consequence of the fact that the computation time scaled with the per-device batch size, while the communication time was independent of this quantity (since we are transferring model weights). Note the resemblance of the $B > XC/W$ condition to the single-device compute-bound rule $B > 240$; in that case as well, the rule came from the fact that computation time scaled with batch size while data-transfer size was (in the $B \ll F, D$ regime) indepdent of batch size.
+
+Let's put in some real numbers to get a sense of scale. For TPUv5p, `C=4.6e14` and `W=2 * 9e10` for 1D data parallelism over ICI, so **our batch size per chip must be at least 2,550 to avoid being communication-bound**. Since we can do data parallelism over multiple axes, if we dedicate all three axes of a TPUv5p pod to pure data parallelism, we 3x our bandwidth **W** and can scale down to only BS=850 per TPU or 7.6M tokens per batch per pod (of 9660 chips)! **This tells us that it's fairly hard to become bottlenecked by pure data parallelism!**
 
 <p markdown=1 class="takeaway">**Note:** sequence parallelism, sometimes called context parallelism, is mostly just another form of data parallelism, where we batch shard over both the batch and sequence dimensions. Since we think of our batch as being a set of tokens, this is mostly a trivial change. The only difference is handling the KVs and Qs during attention, since we need to either gather our KVs or our Qs to do dot-product attention. This is done efficiently with something known as "ring-attention".</p>
 

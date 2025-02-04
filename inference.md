@@ -38,7 +38,9 @@ authors:
   - name: Federico Lebron
     url: "https://fedelebron.com/"
   - name: Peter Choy
+    url: "https://x.com/pchoy95"
   - name: Vinay Ramasesh
+    url: "https://x.com/vinayramasesh"
   - name: Albert Webson
     url: "https://representation.ai/"
   - name: Reiner Pope<sup>*</sup>

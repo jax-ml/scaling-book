@@ -177,7 +177,7 @@ Note that the forward pass has no communication — **it's all in the backward p
 
 **When do we become bottlenecked by communication?** As we can see above, we have two AllReduces per layer, each of size $$2DF$$ (for bf16 weights). When does data parallelism make us communication bound? 
 
-As in the table above, let **C** = per-chip FLOPs, $$\textbf{W_\text{ici}}$$ = **bidirectional** network bandwidth, and $$\textbf{X}$$ = number of shards across which the batch is partitioned<d-footnote>We assume this partitioning is done over an ICI mesh, so the relevant network bandwidth is $W_\text{ici}$</d-footnote>.  Let's calculate the time required to perform the relevant matmuls, $$T_\text{math}$$, and the required communication time $$T_\text{comm}$$.  Since this parallelism scheme requires no communication in the forward pass, we only need to calculate these quantities for the backwards pass.
+As in the table above, let $C$ = per-chip FLOPs, $W_\text{ici}}$ = **bidirectional** network bandwidth, and $X$ = number of shards across which the batch is partitioned<d-footnote>We assume this partitioning is done over an ICI mesh, so the relevant network bandwidth is $W_\text{ici}$</d-footnote>.  Let's calculate the time required to perform the relevant matmuls, $$T_\text{math}$$, and the required communication time $$T_\text{comm}$$.  Since this parallelism scheme requires no communication in the forward pass, we only need to calculate these quantities for the backwards pass.
 
 *Communication time:*  From a previous section we know that the time required to perform an AllReduce in a 1D mesh depends only on the total bytes of the array being AllReduced and the ICI bandwidth $W_\text{ici}$; specifically the AllReduce time is $2 \cdot \text{total bytes} / W_\text{ici}$. Since we need to AllReduce for both $W_{in}$ and $W_{out}$, we have 2 AllReduces per layer.  Each AllReduce is for a weight matrix, i.e. an array of $DF$ parameters, or $2DF$ bytes. Putting this all together, the total time for the AllReduce in a single layer is 
 
@@ -399,9 +399,9 @@ Thus by combining both we can push our minimum batch size per replica down even 
 
 Let $$X$$ be the number of chips dedicated to FSDP and $$Y$$ be the number of chips dedicated to tensor parallelism. Let $$N$$ be the total number of chips in our slice with $$N=XY$$. Let $$M_X$$ and $$M_Y$$ be the number of mesh axes over which we do FSDP and MP respectively (these should roughly sum to 3). We'll purely model the forward pass since it has the most communication per FLOP. Then adding up the comms in the algorithm above, we have
 
-$$T_\text{FSDP comms}(B, X, Y) = \frac{2\cdot 2\cdot D \cdot F}{Y \cdot W \cdot M_X}$$
+$$T_\text{FSDP comms}(B, X, Y) = \frac{2\cdot 2\cdot D \cdot F}{Y \cdot W_\text{ici} \cdot M_X}$$
 
-$$T_\text{MP comms}(B, X, Y) = \frac{2 \cdot 2 \cdot B \cdot D}{X \cdot W \cdot M_Y}$$
+$$T_\text{MP comms}(B, X, Y) = \frac{2 \cdot 2 \cdot B \cdot D}{X \cdot W_\text{ici} \cdot M_Y}$$
 
 And likewise our total FLOPs time is
 
@@ -413,13 +413,13 @@ $$T_\text{FSDP comms} + T_\text{MP comms} = T_\text{math}$$
 
 which gives us
 
-$$\frac{2\cdot 2\cdot D \cdot F}{Y \cdot W \cdot M_X} + \frac{2 \cdot 2 \cdot B \cdot D}{X \cdot W \cdot M_Y} = \frac{2\cdot 2 \cdot B \cdot D \cdot F}{N \cdot C}$$
+$$\frac{2\cdot 2\cdot D \cdot F}{Y \cdot W_\text{ici} \cdot M_X} + \frac{2 \cdot 2 \cdot B \cdot D}{X \cdot W_\text{ici} \cdot M_Y} = \frac{2\cdot 2 \cdot B \cdot D \cdot F}{N \cdot C}$$
 
 Now using the fact that $N=XY$, we have
 
-$$\frac{X \cdot C \cdot F \cdot M_Y}{W} + \frac{N \cdot C \cdot B \cdot M_X}{X \cdot W} = B \cdot F \cdot M_X \cdot M_Y$$
+$$\frac{X \cdot C \cdot F \cdot M_Y}{W_\text{ici}} + \frac{N \cdot C \cdot B \cdot M_X}{X \cdot W_\text{ici}} = B \cdot F \cdot M_X \cdot M_Y$$
 
-and letting $\alpha = C / W = 2550$, the ICI arithmetic intensity, we have
+and letting $\alpha = C / W_\text{ici}$, the ICI arithmetic intensity (roughly 2550), we have
 
 $$\alpha \cdot F \cdot M_Y \cdot \mathbf{X}^2 - B \cdot F \cdot M_X \cdot M_Y \cdot \mathbf{X} + \alpha \cdot B \cdot N \cdot M_X = 0$$
 
@@ -455,14 +455,14 @@ which gives us
 
 $$B = \frac{4 \cdot \alpha^2 \cdot N}{F \cdot M_X \cdot M_Y}$$
 
-so our batch size per device cannot drop below
+so our batch size per device<d-footnote>Note that here we mean, by batch size per device, the total batch size in tokens divided by the total number of chips.  This is not the same as the number of tokens in each device's local batch, which would be $B/X$.</d-footnote> cannot drop below
 
 $$\text{BS per device} = \frac{B}{N} > \frac{4 \alpha^2}{F \cdot M_X \cdot M_Y}$$
 
 or using the approximation above ($$M_X = 2$$, $$M_Y = 1$$) we have roughly
 
 $$\begin{align}
-\text{BS per device} = \frac{K}{N} > \frac{2 \cdot 2550^2}{F}
+\text{BS per device} = \frac{B}{N} > \frac{2 \cdot 2550^2}{F}
 \end{align}$$
 
 which gives us around BS per device of around 396 for the above example, which is conveniently also very approximately where we're compute bound. Below this batch size per pod, you are purely comms bound and see no win in FLOPs.
@@ -563,7 +563,7 @@ So this gives us a nice recipe to fit on a single pod with BS=3.5M. We'd use the
 
 **To go larger than one pod, we need to scale over DCN.** Because DCN has lower bandwidth, it's typically too slow to do much useful FSDP. Instead, we do pure data parallelism over the DCN axis and FSDP within a pod. Lets calculate whether the Data Center Network (DCN) holds up.
 
-With pure data parallelism over DCN, we need to sync the weights and optimizer states during each step (as the model completes its backward pass we need to complete the AllReduce). We can actually just borrow the math from the pure data parallelism section above which tells us that we become comms bound when the $\text{per pod batch size} > C_\text{pod} / W_\text{DCN}$ where the RHS here is the total compute and total bandwidth for the entire pod.
+With pure data parallelism over DCN, we need to sync the weights and optimizer states during each step (as the model completes its backward pass we need to complete the AllReduce). We can actually just borrow the math from the pure data parallelism section above which tells us that we become comms bound when the $\text{per pod batch size} > C_\text{pod} / W_\text{dcn}$ where the RHS here is the total compute and total bandwidth for the entire pod.
 
 * Our total DCN ingress+egress bandwidth is 2.5e10 per host, with 4 chips per host. This gives us ~2000 hosts in the slice, and a total of `5e13` bytes of bandwidth.  
 * $$C_\text{pod}$$ here is the pod size times the per-chip compute, which is `8k * 4.5e14 = 3.8e18` FLOPs.

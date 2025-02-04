@@ -231,7 +231,7 @@ As you can see, there's a clear tradeoff between throughput and latency here. Sm
 
 Not only do we trade off latency and throughput with batch size as knob, we may also prefer a larger topology to a smaller one so we can fit larger batches if we find ourselves limited by HBM. The [next section](../applied-inference) explores this in more detail.
 
-<p markdown=1 class="takeaway">**Takeaway:** If you care about generate throughput, use the largest per-chip batch size possible. Any per-chip batch size about the TPU arithmetic intensity ($B_\text{crit}$, usually 120 or 240) will maximize throughput. You may need to increase your topology to achieve this. Smaller batch sizes will allow you to improve latency at the cost of throughput.</p>
+<p markdown=1 class="takeaway">**Takeaway:** If you care about generation throughput, use the largest per-chip batch size possible. Any per-chip batch size above the TPU arithmetic intensity ($B_\text{crit}$, usually 120 or 240) will maximize throughput. You may need to increase your topology to achieve this. Smaller batch sizes will allow you to improve latency at the cost of throughput.</p>
 
 {% details There are some caveats to this from a hardware standpoint. Click here for some nits. %}
 
@@ -296,7 +296,7 @@ Let's see what happens if we try to perform generation perfectly efficiently at 
 
 For this model, increasing the batch size does give us better throughput, but we suffer rapidly diminishing returns. We OOM beyond batch size 16, and need an order of magnitude more memory to go near 240. A bigger topology can improve the latency, but we've hit a wall on the per chip throughput.
 
-Let's say we keep the total number of params the same, but magically make the KV cache 5x smaller (say, with 1:5 GMQA, which means we have 8 KV heads shared over the 40 Q heads — see next section for more details).
+Let's say we keep the total number of params the same, but magically make the KV cache 5x smaller (say, with 1:5 [GMQA](#tricks-for-improving-generation-throughput-and-latency), which means we have 8 KV heads shared over the 40 Q heads — see next section for more details).
 
 | Batch Size                        |      1 |        8 |       16 |       32 |       64 |      240 |
 | :-------------------------------- | -----: | -------: | -------: | -------: | -------: | -------: |

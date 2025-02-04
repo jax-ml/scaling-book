@@ -98,7 +98,7 @@ We'll use the following notation to simplify calculations throughout this sectio
 | Notation | Meaning (hardware characteristic)                                          |
 | :------- | :------------------------------------------------------------------------- |
 | C        | FLOPS/s per chip                                                           |
-| W        | Network bandwidth (bidirectional, often subscripted; e.g. W<sub>ICI</sub>) |
+| W        | Network bandwidth (bidirectional, often subscripted as  e.g. $W_{\text{ici}}$ or $W_{\text{dcn}}$ |
 | X        | Number of chips along mesh axis X                                          |
 | Y        | Number of chips along an alternate mesh axis, labeled Y                    |
 | Z        | Number of chips along a third mesh axis, labeled Z                         |
@@ -173,12 +173,12 @@ Note that the forward pass has no communication — **it's all in the backward p
 
 **When do we become bottlenecked by communication?** As we can see above, we have two AllReduces per layer, each of size $$2DF$$ (for bf16 weights). When does data parallelism make us communication bound? 
 
-As in the table above, let **C** = per-chip FLOPs, **W** = **bidirectional** network bandwidth, and $$\textbf{X}$$ = number of shards across which the batch is partitioned.  Let's calculate the time required to perform the relevant matmuls, $$T_\text{math}$$, the required communication time $$T_\text{comm}$$.  Since this parallelism scheme requires no communication in the forward pass, we only need to calculate these quantities for the backwards pass.
+As in the table above, let **C** = per-chip FLOPs, $$\textbf{W_\text{ici}}$$ = **bidirectional** network bandwidth, and $$\textbf{X}$$ = number of shards across which the batch is partitioned<d-footnote>We assume this partitioning is done over an ICI mesh, so the relevant network bandwidth is $W_\text{ici}$</d-footnote>.  Let's calculate the time required to perform the relevant matmuls, $$T_\text{math}$$, and the required communication time $$T_\text{comm}$$.  Since this parallelism scheme requires no communication in the forward pass, we only need to calculate these quantities for the backwards pass.
 
-*Communication time:*  From a previous section we know that the time required to perform an AllReduce in a 1D mesh depends only on the total bytes of the array being AllReduced and the ICI bandwidth $W$; specifically the AllReduce time is $2 \cdot \text{total bytes} / W$. Since we need to AllReduce for both $W_{in}$ and $W_{out}$, we have 2 AllReduces per layer.  Each AllReduce is for a weight matrix, i.e. an array of $DF$ parameters, or $2DF$ bytes. Putting this all together, the total time for the AllReduce in a single layer is 
+*Communication time:*  From a previous section we know that the time required to perform an AllReduce in a 1D mesh depends only on the total bytes of the array being AllReduced and the ICI bandwidth $W_\text{ici}$; specifically the AllReduce time is $2 \cdot \text{total bytes} / W_\text{ici}$. Since we need to AllReduce for both $W_{in}$ and $W_{out}$, we have 2 AllReduces per layer.  Each AllReduce is for a weight matrix, i.e. an array of $DF$ parameters, or $2DF$ bytes. Putting this all together, the total time for the AllReduce in a single layer is 
 
 $$\begin{align}
-T_\text{comm} &= \frac{2 \cdot 2 \cdot 2 \cdot D \cdot F}{W}. \\
+T_\text{comm} &= \frac{2 \cdot 2 \cdot 2 \cdot D \cdot F}{W_\text{ici}}. \\
 \end{align}$$
 
 *Matmul time:* Each layer comprises two matmuls in the forward pass, or four matmuls in the backwards pass, each of which requires $2(B/X)DF$ FLOPs.  Thus
@@ -190,19 +190,19 @@ T_\text{math} &= \frac{2 \cdot 2 \cdot 2 \cdot B \cdot L \cdot D \cdot F}{X \cdo
 Since we overlap, the total time per layer is the max of these two quantities:
 
 $$\begin{aligned}
-T &\approx \max(\frac{8 \cdot B \cdot D \cdot F}{X \cdot C}, \frac{8 \cdot D \cdot F}{W}) \\
-T &\approx 8 \cdot D \cdot F \cdot \max(\frac{B}{X \cdot C}, \frac{1}{W})
+T &\approx \max(\frac{8 \cdot B \cdot D \cdot F}{X \cdot C}, \frac{8 \cdot D \cdot F}{W_\text{ici}}) \\
+T &\approx 8 \cdot D \cdot F \cdot \max(\frac{B}{X \cdot C}, \frac{1}{W_\text{ici}})
 \end{aligned}$$
 
 We become compute-bound when $$T_\text{math}/T_\text{comm} > 1$$, or when 
 
 $$\begin{align}
-\frac{B}{X} > \frac{C}{W}.
+\frac{B}{X} > \frac{C}{W_\text{ici}}.
 \end{align}$$
 
-Thus compute-bound operation requires the per-device batch size $$B / X$$ to exceed the operational intensity, $C / W$, of the network chosen for data parallelism.  This was ultimately a consequence of the fact that the computation time scaled with the per-device batch size, while the communication time was independent of this quantity (since we are transferring model weights). Note the resemblance of the $B > XC/W$ condition to the single-device compute-bound rule $B > 240$; in that case as well, the rule came from the fact that computation time scaled with batch size while data-transfer size was (in the $B \ll F, D$ regime) indepdent of batch size.
+Thus compute-bound operation requires the per-device batch size $$B / X$$ to exceed the operational intensity, $C / W_\text{ici}$, of the network chosen for data parallelism.  This was ultimately a consequence of the fact that the computation time scaled with the per-device batch size, while the communication time was independent of this quantity (since we are transferring model weights). Note the resemblance of the $B > XC/W_\text{ici}$ condition to the single-device compute-bound rule $B > 240$; in that case as well, the rule came from the fact that computation time scaled with batch size while data-transfer size was (in the $B \ll F, D$ regime) independent of batch size.
 
-Let's put in some real numbers to get a sense of scale. For TPUv5p, `C=4.6e14` and `W=2 * 9e10` for 1D data parallelism over ICI, so **our batch size per chip must be at least 2,550 to avoid being communication-bound**. Since we can do data parallelism over multiple axes, if we dedicate all three axes of a TPUv5p pod to pure data parallelism, we 3x our bandwidth **W** and can scale down to only BS=850 per TPU or 7.6M tokens per batch per pod (of 9660 chips)! **This tells us that it's fairly hard to become bottlenecked by pure data parallelism!**
+Let's put in some real numbers to get a sense of scale. For TPUv5p, `C=4.6e14` and `W=2 * 9e10` for 1D data parallelism over ICI, so **our batch size per chip must be at least 2,550 to avoid being communication-bound**. Since we can do data parallelism over multiple axes, if we dedicate all three axes of a TPUv5p pod to pure data parallelism, we 3x our bandwidth $W_\text{ici}$ and can scale down to only BS=850 per TPU or 7.6M tokens per batch per pod (of 9660 chips)! **This tells us that it's fairly hard to become bottlenecked by pure data parallelism!**
 
 <p markdown=1 class="takeaway">**Note:** sequence parallelism, sometimes called context parallelism, is mostly just another form of data parallelism, where we batch shard over both the batch and sequence dimensions. Since we think of our batch as being a set of tokens, this is mostly a trivial change. The only difference is handling the KVs and Qs during attention, since we need to either gather our KVs or our Qs to do dot-product attention. This is done efficiently with something known as "ring-attention".</p>
 
@@ -254,12 +254,12 @@ This is also called "ZeRO Sharding", from "ZeRo Overhead sharding" since we don'
 
 $$\begin{aligned}
 T_{math} &= \frac{2 \cdot 2 \cdot B \cdot D \cdot F}{X \cdot C} \\
-T_{comm} &= \frac{2 \cdot 2 \cdot D \cdot F}{W} \\
-T &\approx \max\left(\frac{4 \cdot B \cdot D \cdot F}{X \cdot C}, \frac{4 \cdot D \cdot F}{W}\right) \\
-T &\approx 4 \cdot D \cdot F \cdot \max\left(\frac{B}{X \cdot C}, \frac{1}{W}\right)
+T_{comm} &= \frac{2 \cdot 2 \cdot D \cdot F}{W_\text{ici}} \\
+T &\approx \max\left(\frac{4 \cdot B \cdot D \cdot F}{X \cdot C}, \frac{4 \cdot D \cdot F}{W_\text{ici}}\right) \\
+T &\approx 4 \cdot D \cdot F \cdot \max\left(\frac{B}{X \cdot C}, \frac{1}{W_\text{ici}}\right)
 \end{aligned}$$
 
-As with the fully data-parallel scheme, we are compute bound when $$B / X > C / W$$, i.e. when the per-device batch size $B/X$ exceeds the "ICI operational intensity" $C/W$, which was 2550 for a TPUv5p. Because this compute-bound condition is the same in both cases (data-parallelism and FSDP), if we have a per-device batch size which gets us into the compute-bound regime for the purely data-parallel scheme, we can---without worrying about leaving the compute-bound regime---add FSDP and save ourselves a massive amount of parameter and optimizer state memory! The cost we have to pay to get this memory savings---extra communication in the forward pass---is immaterial, since we just overlap it with forward-pass FLOPs.
+Therefore, as with pure data-parallelism, we are compute bound when $$B / X > C / W_\text{ici}$$, i.e. when the per-device batch size $B/X$ exceeds the "ICI operational intensity" $C/W_\text{ici}$ (2550 for v5p). This is great for us, because it means if our per-device batch size is big enough to be compute-bound for pure data-parallelism, we can---without worrying about leaving the compute-bound regime-—-simply upgrade to FSDP, saving ourselves a massive amount of parameter and optimizer state memory!  Though we did have to add communication to the forward pass, this cost is immaterial since it just overlaps with forward-pass FLOPs. 
 
 <p markdown=1 class="takeaway">**Takeaway:** both FSDP and pure data parallelism become bandwidth bound on TPUv5 when the batch size per device is less than $2550 / n_\text{axes}$.</p>
 
@@ -333,11 +333,11 @@ $$\begin{align}
 F > Y \cdot \frac{C}{W_\text{ici}}
 \end{align}$$
 
-Thus for instance, for TPUv5p, $$C / W_{ICI} = 2550$$ in bf16, so we can only do tensor parallelism up to $$Y < F / 2550$$. When we have multiple ICI axes, our $$T_\text{comms}$$ is reduced by a factor of $n_\text{axes}$, so we get $$Y < n_\text{axes} * F / 2550$$.
+Thus for instance, for TPUv5p, $$C / W_{ici} = 2550$$ in bf16, so we can only do tensor parallelism up to $$Y < F / 2550$$. When we have multiple ICI axes, our $$T_\text{comms}$$ is reduced by a factor of $n_\text{axes}$, so we get $$Y < n_\text{axes} * F / 2550$$.
 
 <p markdown=1 class="takeaway">**Takeaway**: model parallelism becomes communication bound when $$Y > n_\text{axes} * F / 2550$$. For most models this is between 8 and 16-way model parallelism.</p>
 
-**Note that this doesn't depend on the precision of the computation**, since e.g. for int8, on TPUv5p, $$C_\text{int8} / W_{ICI}$$ is $$5100$$ instead of $$2550$$ but the comms volume is also halved, so the two factors of two cancel.
+**Note that this doesn't depend on the precision of the computation**, since e.g. for int8, on TPUv5p, $$C_\text{int8} / W_{ici}$$ is $$5100$$ instead of $$2550$$ but the comms volume is also halved, so the two factors of two cancel.
 
 **Let's think about some examples:**
 
@@ -435,7 +435,7 @@ X \approxeq \frac{B}{2550} \pm \frac{\sqrt{B^2\cdot F^2 - 2 \cdot 2550^2 \cdot F
 
 The final equation isn't exactly pretty but it gives a definitive formula for calculating optimal FSDP/model parallelism. For instance, on a TPU v5p 4x4x4 (64 chips) with `F = 32,768` and `B = 48,000`, `X = 31.7` (or about 32), and consequently `Y = 2.01`, or rounded down, about 2.
 
-Here we can plot the ratio of FLOPs to comms time for different parallelism strategies for this setup (64 chips). You can see pure FSDP is dominant on the RHS from about 1100 tokens / chip onward, while mixed FSDP + model parallelism (with different numbers of axes devoted to model parallelism) is dominant down to about 200-400 tokens / batch, at which point all schemes become FLOPs-bound.
+Here we can plot the ratio of FLOPs to comms time for different parallelism strategies for this setup (64 chips). You can see pure FSDP is dominant on the RHS from about 1100 tokens / chip onward, while mixed FSDP + model parallelism (with different numbers of axes devoted to model parallelism) is dominant down to about 200-400 tokens / batch, at which point all schemes become comms-bound.
 
 {% include figure.liquid path="assets/img/mixed-fsdp-comms.png" class="img-fluid" caption="<b>Figure:</b> ratio of FLOPs to comms time for optimal mixed FSDP/MP on a TPUv5p 4x4x4 slice with F=30k. The dotted red line is the point at which we become comms bound. As expected, model parallelism has a fixed ratio with batch size, while FSDP performance improves with batch size."%}
 

@@ -153,7 +153,7 @@ $$\begin{align*}
 = \frac{1.97E+14}{8.20E+11} \implies B \geq 240 = B_{\text{crit}}
 \end{align*}$$
 
-<p markdown=1 class="takeaway">**Takeaway:** To be compute-bound on any matrix multiplication, our total token batch size must be greater than $B_\text{crit}$, which depends on the hardware and quantization. For bf6 activations on TPU v5e, this is 240 tokens. This applies to any simple matmul in our Transformer (e.g. the MLP block or the attention projections).</p>
+<p markdown=1 class="takeaway">**Takeaway:** To be compute-bound on any matrix multiplication, our total token batch size must be greater than $B_\text{crit}$, which depends on the hardware and quantization. For bf16 activations on TPU v5e, this is 240 tokens. This applies to any simple matmul in our Transformer (e.g. the MLP block or the attention projections).</p>
 
 During training, we'll have a high intensity during all our matrix multiplications because we reuse the same weights over a very large batch. **That high arithmetic intensity carries over to prefill, since user prompts are typically hundreds if not thousands of tokens long.** As we saw before, the hardware arithmetic intensity of a TPUv5e is 240, so if a sequence longer than 240 tokens is fed into a dense model running on this hardware at bf16, we would expect to be compute-bound and all is well. Prompts shorter than this can technically be batched together to achieve higher utilization, but this is typically not necessary.
 
@@ -199,21 +199,21 @@ This also means you will get diminishing returns on throughput from increasing b
 
 From this math, we can get pretty good bounds on the step time we should aim for when optimizing. **(Note: if there is one thing we want to the reader to take away from this entire chapter, it's the following).** For small batch sizes during generation (which is common), we can lower-bound our per-step latency by assuming we're memory bandwidth bound in both the attention and MLP blocks:
 
-$$\begin{equation*}
+$$\begin{equation}
 \text{Theoretical Min Step Time} = \frac{\text{Batch Size} \times \text{KV Cache Size} + \text{Parameter Size}}{\text{Total Memory Bandwidth}}
-\end{equation*}$$
+\end{equation}$$
 
 Similarly, for throughput:
 
-$$\begin{equation*}
+$$\begin{equation}
 \text{Theoretical Max Tokens/s} = \frac{\text{Batch Size} \times \text{Total Memory Bandwidth}}{\text{Batch Size} \times \text{KV Cache Size} + \text{Parameter Size}}
-\end{equation*}$$
+\end{equation}$$
 
 Eventually, as our batch size grows, FLOPs begin to dominate parameter loading, so in practice we have the more general equation:
 
-$$\begin{align*}
+$$\begin{align}
 \tiny \text{Theoretical Step Time (General)} = \underbrace{\frac{\text{Batch Size} \times \text{KV Cache Size}}{\tiny \text{Total Memory Bandwidth}}}_{\text{Attention (always bandwidth-bound)}} + \underbrace{\max\left(\frac{2 \times \text{Batch Size} \times \text{Parameter Count}}{\text{Total FLOPs/s}}, \frac{\text{Parameter Size}}{\text{Total Memory Bandwidth}}\right)}_{\tiny \text{MLP (can be compute-bound)}}
-\end{align*}$$
+\end{align}$$
 
 where the attention component (left) is never compute-bound, and thus doesn't need a FLOPs roofline. These are fairly useful for back-of-the-envelope calculations, e.g.
 

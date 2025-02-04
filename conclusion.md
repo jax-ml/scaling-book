@@ -93,8 +93,9 @@ This document represents a significant collective investment from many people at
 * Jacob Austin led the work of transforming this first version from rough notes into a more polished and comprehensive artifact. He did much of the work of editing, formatting, and releasing this document, and coordinated contributions from other authors.
 * Most of the figures and animations were made by Anselm Levskaya and Charlie Chen.
 * Charlie Chen wrote the inference section and drew many of the inference figures.
+* Roy Frostig helped usher the document through various approval processes and was helpful on every step of the journey.
 
-We'd also like to thank many others gave critical feedback throughout the process, in particular Vinay Ramasesh, Zak Stone, Nikhil Sethi, Caitlin Stanton, Alex Dimitriev, Sridhar Lakshmanamurthy, Albert Magyar, Diwakar Gupta, Jeff Dean, Corry Wang, and many others. Thanks to Ruiqi Gao for help with the HTML formatting.
+We'd also like to thank many others gave critical feedback throughout the process, in particular Vinay Ramasesh, Zak Stone, Nikhil Sethi, Caitlin Stanton, Alex Dimitriev, Sridhar Lakshmanamurthy, Albert Magyar, Diwakar Gupta, Jeff Dean, Corry Wang, Matt Johnson, Peter Hawkins, and many others. Thanks to Ruiqi Gao for help with the HTML formatting.
 
 **Thank you all!**
 

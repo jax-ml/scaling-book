@@ -120,8 +120,8 @@ $$\begin{equation}
 Arithmetic intensity measures the "FLOPs per byte" of a given operation. To a first order, when our arithmetic intensity is high, $T_\text{math}$ is large compared to $T_\text{comms}$ and we typically use most of the available FLOPs. When the opposite is true, we spent more time on comms and waste FLOPs. The point where this crossover happens is the "peak arithmetic intensity" of our hardware, the ratio of peak accelerator FLOPs/s to accelerator bandwidth.
 
 $$\begin{align*}
-T_\text{math} > T_\text{comms} \Leftrightarrow \frac{\text{Algorithm FLOPs}} {\text{Accelerator FLOPs/s}} > \frac{\text{Communication GB}}{\text{Network Bandwidth GB/s}} & \\[0.5em]
-\Leftrightarrow \frac{\text{Computation FLOPs}}{\text{Communication GB}} > \frac{\text{Accelerator FLOPs/s}}{\text{Network Bandwidth GB/s}} & \\[0.5em]
+T_\text{math} > T_\text{comms} \Leftrightarrow \frac{\text{Computation FLOPs}} {\text{Accelerator FLOPs/s}} > \frac{\text{Communication GB}}{\text{Bandwidth GB/s}} & \\[0.5em]
+\Leftrightarrow \frac{\text{Computation FLOPs}}{\text{Communication GB}} > \frac{\text{Accelerator FLOPs/s}}{\text{Bandwidth GB/s}} & \\[0.5em]
 \Leftrightarrow \text{Intensity}(\text{Algorithm}) > \text{Intensity}(\text{Accelerator}) & \\
 \end{align*}$$
 

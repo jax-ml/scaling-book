@@ -29,4 +29,4 @@ If you see any issues or have questions, please leave a comment on the website i
 
 ![dragon](assets/img/dragon.png)
 
-*This book was originally called "How To Scale Your Dragon", after the Dreamworks film, hence the dragon imagery.*
+*This book was originally called "How To Train Your Dragon", after the Dreamworks film, hence the dragon imagery.*

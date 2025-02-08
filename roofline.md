@@ -91,7 +91,7 @@ T_\text{math} = \frac{\text{Computation FLOPs}}{\text{Accelerator FLOPs/s}}
 
 For instance, an NVIDIA H100 can perform about 9.89e14 bfloat16<d-footnote>bf16 is short for <a href="https://en.wikipedia.org/wiki/Bfloat16_floating-point_format">bfloat16</a>, a 16-bit floating point format often used in ML.</d-footnote> FLOPs/s while a TPU v6e can perform 9.1e14 FLOPs/s. That means doing 1e12 FLOPs on an H100 will take (roughly) `1e12 / 9.89e14 = 1.01ms` and `1e12 / 9.1e14 = 1.1ms` on a TPU v6e.<d-footnote>Note that these chips are priced differently, and this comparison does not normalize to cost.</d-footnote>
 
-**Communication within a chip:** *Within an accelerator*, tensors need to be transferred between on-chip memory (HBM) and the compute cores. You'll see the bandwidth of this link referred to as 'HBM bandwidth'<d-footnote>NVIDIA also calls this 'memory bandwidth'.</d-footnote>. On an H100, [this is about 3.35TB/s](https://www.nvidia.com/en-us/data-center/h100/) and [on TPU v6e this is about 1.6TB/s](https://cloud.google.com/tpu/docs/v6e).
+**Communication within a chip:** *Within an accelerator*, tensors need to be transferred between on-chip memory (HBM) and the compute cores. You'll see the bandwidth of this link referred to as "HBM bandwidth"<d-footnote>NVIDIA also calls this "memory bandwidth."</d-footnote> On an H100, [this is about 3.35TB/s](https://www.nvidia.com/en-us/data-center/h100/) and on TPU v6e [this is about 1.6TB/s](https://cloud.google.com/tpu/docs/v6e).
 
 **Communication between chips:**  When we distribute a model *across multiple accelerators*, tensors frequently need to be transferred between them. There are often a few options for this on our hardware (ICI, DCN, and PCIe), each with different bandwidths. 
 

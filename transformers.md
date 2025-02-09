@@ -185,32 +185,34 @@ $$
 
 ### Attention
 
-For multi-headed attention, let us assume equal head dimension H for **Q**,**K**,**V** projections, and estimate the cost of the **QKVO** matmuls:
+For the generic grouped-query attention case with different **Q** and **KV** head numbers, let us assume equal head dimension H for **Q**,**K**,**V** projections, and estimate the cost of the **QKVO** matmuls:
 
 $$
 \begin{array}{ccc}
 \textrm{operation} & \textrm{train FLOPs} & \textrm{params} \\
 \hline \\
 A[B,T,\red{D}] \cdot W_{Q}[\red{D}, N, H] & 6BTDNH & DNH \\[10pt]
-A[B,T,\red{D}] \cdot W_{K}[\red{D}, N, H] & 6BTDNH & DNH \\[10pt]
-A[B,T,\red{D}] \cdot W_{V}[\red{D}, N, H] & 6BTDNH & DNH \\[10pt]
+A[B,T,\red{D}] \cdot W_{K}[\red{D}, K, H] & 6BTDKH & DKH \\[10pt]
+A[B,T,\red{D}] \cdot W_{V}[\red{D}, K, H] & 6BTDKH & DKH \\[10pt]
 A[B,T,\red{N}, \red{H}] \cdot W_{O}[\red{N}, \red{H}, D] & 6BTDNH & DNH \\[10pt]
 \hline \\
-& 24BTDNH & 4DNH
+& 12BTD(N+K)H & 2D(N+K)H
 \end{array}
 $$
 
-The dot-product attention operation is more subtle, effectively being a $$TH \cdot HS$$ matmul batched over the $$B$$, $$N$$ dimensions, a softmax, and a $$TS \cdot SH$$ matmul again batched over the $$B$$, $$N$$ dimensions. We highlight the batched dims in blue:
+The dot-product attention operation is more subtle, effectively being a $$TH \cdot HS$$ matmul batched over the $$B$$, $$K$$ dimensions, a softmax, and a $$TS \cdot SH$$ matmul again batched over the $$B$$, $$K$$ dimensions. We highlight the batched dims in blue:
 
 $$
 \begin{array}{cc}
-\textrm{operation} & \textrm{train FLOPs}                                                               \\
-\hline                                                                                                  \\[3pt]
-Q[\blue{B}, T, \blue{N}, \red{H}] \cdot K[\blue{B}, S, \blue{N}, \red{H}]  & 6BTSNH                     \\[3pt]
-\textrm{softmax}_S \;\; L[\blue{B}, T, S, \blue{N}]                        & \gray{O(BTSN)}             \\[3pt]
-S[\blue{B}, T, \red{S}, \blue{N}] \cdot V[\blue{B}, \red{S}, \blue{N}, H]        & 6BTSNH               \\[3pt]
-\hline                                                                                                  \\
-                                                                           & \approx 12BTSNH = 12BT^2NH \\
+\textrm{operation} & \textrm{train FLOPs} \\
+\hline \\[3pt]
+Q[\blue{B}, T, \blue{K}, G, \red{H}] \cdot K[\blue{B}, S, \blue{K}, \red{H}]
+& 6BTSKGH = 6BTSNH  \\[3pt]
+\textrm{softmax}_S \;\; L[B, T, S, K, G] & \gray{O(BTSKG) = O(BTSN)} \\[3pt]
+S[\blue{B}, T, \red{S}, \blue{K}, G] \cdot V[\blue{B}, \red{S}, \blue{K}, H] 
+& 6BTSKGH = 6BTSNH \\[3pt]
+\hline \\
+& \approx 12BTSNH = 12BT^2NH \\
 \end{array}
 $$
 
@@ -233,15 +235,15 @@ If we neglect the cost of dot-product attention for shorter-context training, th
 
 $$
 \begin{align*}
-18BTDF + 24BTDNH = 6 *BT * (3DF + 4DNH) \\ = 6 * \textrm{num tokens} * \textrm{parameter count}
+(18BTDF + 12BTD(N+K)H)L = 6 *BT * (3DF + 2D(N+K)H)L \\ = 6 * \textrm{num tokens} * \textrm{parameter count}
 \end{align*}
 $$
 
-Leading to a famous rule of thumb for estimating Transformer FLOP count, ignoring the attention FLOPs. (Unembedding is another simple matmul with $6BSEV$ FLOPs and $EV$ params, and follows the same rule of thumb.)
+Leading to a famous rule of thumb for estimating dense Transformer FLOP count, ignoring the attention FLOPs. (Unembedding is another simple matmul with $6BSEV$ FLOPs and $EV$ params, and follows the same rule of thumb.)
 
 ### Fractional cost of attention with context length
 
-If we do account for dot-product attention above and assume $$F=4D$$ and $$D=NH$$ (as is typical):
+If we do account for dot-product attention above and assume $$F=4D$$, $$D=NH$$ (as is typical) and $$N=K$$:
 
 $$\small{\frac{\textrm{attention FLOPs}}{\textrm{matmul FLOPs}} = \frac{12BT^2NH}{18BTDF + 24BTDNH} = \frac{12BT^2D}{4*18 BTD^2 + 24 BTD^2} = \frac{12BT^2D}{96 BTD^2} = \frac{T}{8D}}$$
 
@@ -279,7 +281,7 @@ As we'll see in [Section 7](../inference), LLM inference has two key parts, pref
 * **Prefill** processes a long prompt and saves its attention activations in a Key-Value Cache (KV Cache) for use in generation, specifically the key-value projections in the attention block.
 * **Generation** batches several of these KV caches together and samples tokens from each of them.
 
-Each KV cache is then effectively an array of size $[2, S, L, N, H]$ where the 2 accounts for the keys and values. This is quite large! The total size of the Key-Value cache in int8 is $2SLNH$. For a moderately-sized model with 8k context length, 64 layers, and $NH = D = 8192$, this is $2 \cdot 8192 \cdot 64 \cdot 8192 = 8\text{GiB}$. We often use fewer KV heads than query heads to reduce this size.
+Each KV cache is then effectively an array of size $[2, S, L, K, H]$ where the 2 accounts for the keys and values. This is quite large! The total size of the Key-Value cache in int8 is $2SLKH$. For a moderately-sized multihead attention model with 8k context length, 64 layers, and $NH = KH = D = 8192$, this is $2 \cdot 8192 \cdot 64 \cdot 8192 = 8\text{GiB}$. We often use fewer KV heads $$K$$ than the query heads $$N$$ to reduce this size.
 
 ## What Should You Take Away from this Section?
 

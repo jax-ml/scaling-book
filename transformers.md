@@ -185,32 +185,34 @@ $$
 
 ### Attention
 
-For multi-headed attention, let us assume equal head dimension H for **Q**,**K**,**V** projections, and estimate the cost of the **QKVO** matmuls:
+For the generic grouped-query attention case with different **Q** and **KV** head numbers, let us assume equal head dimension H for **Q**,**K**,**V** projections, and estimate the cost of the **QKVO** matmuls:
 
 $$
 \begin{array}{ccc}
 \textrm{operation} & \textrm{train FLOPs} & \textrm{params} \\
 \hline \\
 A[B,T,\red{D}] \cdot W_{Q}[\red{D}, N, H] & 6BTDNH & DNH \\[10pt]
-A[B,T,\red{D}] \cdot W_{K}[\red{D}, N, H] & 6BTDNH & DNH \\[10pt]
-A[B,T,\red{D}] \cdot W_{V}[\red{D}, N, H] & 6BTDNH & DNH \\[10pt]
+A[B,T,\red{D}] \cdot W_{K}[\red{D}, K, H] & 6BTDKH & DKH \\[10pt]
+A[B,T,\red{D}] \cdot W_{V}[\red{D}, K, H] & 6BTDKH & DKH \\[10pt]
 A[B,T,\red{N}, \red{H}] \cdot W_{O}[\red{N}, \red{H}, D] & 6BTDNH & DNH \\[10pt]
 \hline \\
-& 24BTDNH & 4DNH
+& 12BTD(N+K)H & 2D(N+K)H
 \end{array}
 $$
 
-The dot-product attention operation is more subtle, effectively being a $$TH \cdot HS$$ matmul batched over the $$B$$, $$N$$ dimensions, a softmax, and a $$TS \cdot SH$$ matmul again batched over the $$B$$, $$N$$ dimensions. We highlight the batched dims in blue:
+The dot-product attention operation is more subtle, effectively being a $$TH \cdot HS$$ matmul batched over the $$B$$, $$K$$ dimensions, a softmax, and a $$TS \cdot SH$$ matmul again batched over the $$B$$, $$K$$ dimensions. We highlight the batched dims in blue:
 
 $$
 \begin{array}{cc}
-\textrm{operation} & \textrm{train FLOPs}                                                               \\
-\hline                                                                                                  \\[3pt]
-Q[\blue{B}, T, \blue{N}, \red{H}] \cdot K[\blue{B}, S, \blue{N}, \red{H}]  & 6BTSNH                     \\[3pt]
-\textrm{softmax}_S \;\; L[\blue{B}, T, S, \blue{N}]                        & \gray{O(BTSN)}             \\[3pt]
-S[\blue{B}, T, \red{S}, \blue{N}] \cdot V[\blue{B}, \red{S}, \blue{N}, H]        & 6BTSNH               \\[3pt]
-\hline                                                                                                  \\
-                                                                           & \approx 12BTSNH = 12BT^2NH \\
+\textrm{operation} & \textrm{train FLOPs} \\
+\hline \\[3pt]
+Q[\blue{B}, T, \blue{K}, G, \red{H}] \cdot K[\blue{B}, S, \blue{K}, \red{H}]
+& 6BTSKGH = 6BTSNH  \\[3pt]
+\textrm{softmax}_S \;\; L[B, T, S, K, G] & \gray{O(BTSKG) = O(BTSN)} \\[3pt]
+S[\blue{B}, T, \red{S}, \blue{K}, G] \cdot V[\blue{B}, \red{S}, \blue{K}, H] 
+& 6BTSKGH = 6BTSNH \\[3pt]
+\hline \\
+& \approx 12BTSNH = 12BT^2NH \\
 \end{array}
 $$
 
@@ -233,15 +235,15 @@ If we neglect the cost of dot-product attention for shorter-context training, th
 
 $$
 \begin{align*}
-18BTDF + 24BTDNH = 6 *BT * (3DF + 4DNH) \\ = 6 * \textrm{num tokens} * \textrm{parameter count}
+(18BTDF + 12BTD(N+K)H)L = 6 *BT * (3DF + 2D(N+K)H)L \\ = 6 * \textrm{num tokens} * \textrm{parameter count}
 \end{align*}
 $$
 
-Leading to a famous rule of thumb for estimating Transformer FLOP count, ignoring the attention FLOPs. (Unembedding is another simple matmul with $6BSEV$ FLOPs and $EV$ params, and follows the same rule of thumb.)
+Leading to a famous rule of thumb for estimating dense Transformer FLOP count, ignoring the attention FLOPs. (Unembedding is another simple matmul with $6BSEV$ FLOPs and $EV$ params, and follows the same rule of thumb.)
 
 ### Fractional cost of attention with context length
 
-If we do account for dot-product attention above and assume $$F=4D$$ and $$D=NH$$ (as is typical):
+If we do account for dot-product attention above and assume $$F=4D$$, $$D=NH$$ (as is typical) and $$N=K$$:
 
 $$\small{\frac{\textrm{attention FLOPs}}{\textrm{matmul FLOPs}} = \frac{12BT^2NH}{18BTDF + 24BTDNH} = \frac{12BT^2D}{4*18 BTD^2 + 24 BTD^2} = \frac{12BT^2D}{96 BTD^2} = \frac{T}{8D}}$$
 

@@ -516,7 +516,7 @@ I'm going to invent a new model based on LLaMA-2 13B for this section. Here are 
 * Attention parameter count: $L * 2 * D * H * (N + K)$
 * Vocabulary parameter: $D * V$ (since we share these matrices)
 
-Our total parameter count is thus $L * D * (3F + 2H * (N + K) + V)$. Plugging in the numbers above, we have `64 * 4096 * (3*16384 + 2 * 256 * (32 + 8) + 32128) = 26.7e9`. Thus, this model has about 26.7 billion parameters.
+Our total parameter count is thus $L * D * (3F + 2H * (N + K)) + D * V$. Plugging in the numbers above, we have `64 * 4096 * (3*16384 + 2 * 256 * (32 + 8)) + 4096 * 32128 = 18.4e9`. Thus, this model has about 18.4 billion parameters.
 
 {% enddetails %}
 

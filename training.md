@@ -346,7 +346,7 @@ Thus for instance, for TPUv5p, $$C / W_{ici} = 2550$$ in bf16, so we can only do
 
 **Let's think about some examples:**
 
-* On TPUv4p with LLaMA 3-70B with $$D = 8192,$$ $$F \approx 30,000$$, we can comfortably do 8-way model parallelism, but will be communication bound on 16 way model parallelism. The required F for model 8 way model sharding is 20k.
+* On TPUv5p with LLaMA 3-70B with $$D = 8192,$$ $$F \approx 30,000$$, we can comfortably do 8-way model parallelism, but will be communication bound on 16 way model parallelism. The required F for model 8 way model sharding is 20k.
 
 * For Gemma 7B, $$F \approx 50k$$, so we become communication bound with 19-way model parallelism. That means we could likely do 16-way and still see good performance.
 

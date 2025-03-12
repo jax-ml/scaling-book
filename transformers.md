@@ -195,8 +195,7 @@ A[B,T,\red{D}] \cdot W_{Q}[\red{D}, N, H] & 6BTDNH & DNH \\[10pt]
 A[B,T,\red{D}] \cdot W_{K}[\red{D}, K, H] & 6BTDKH & DKH \\[10pt]
 A[B,T,\red{D}] \cdot W_{V}[\red{D}, K, H] & 6BTDKH & DKH \\[10pt]
 A[B,T,\red{N}, \red{H}] \cdot W_{O}[\red{N}, \red{H}, D] & 6BTDNH & DNH \\[10pt]
-\hline \\
-& 12BTD(N+K)H & 2D(N+K)H
+\hline \\ & 12BTD(N+K)H & 2D(N+K)H
 \end{array}
 $$
 
@@ -239,7 +238,7 @@ $$
 \end{align*}
 $$
 
-Leading to a famous rule of thumb for estimating dense Transformer FLOP count, ignoring the attention FLOPs. (Unembedding is another simple matmul with $6BSEV$ FLOPs and $EV$ params, and follows the same rule of thumb.)
+Leading to a famous rule of thumb for estimating dense Transformer FLOP count, ignoring the attention FLOPs. (Unembedding is another simple matmul with $6BSDV$ FLOPs and $DV$ params, and follows the same rule of thumb.)
 
 ### Fractional cost of attention with context length
 

@@ -120,7 +120,7 @@ When a program is running slower than we'd like, we primarily work with the JAX 
 
 ## The JAX Profiler: A Multi-Purpose TPU Profiler
 
-JAX provides a multi-purpose TPU profiler with a bunch of useful tools for understanding what's happening on the TPU when a program is run. You can using the `jax.profiler` module to trace a program as it's running and record everything from the duration of each subcomponent, the HLO of each program, memory usage, and more. For example, this code will dump a trace to a file in `/tmp/tensorboard` that can be viewed in TensorBoard ([here](https://jax.readthedocs.io/en/latest/../profiling#tensorboard-profiling) is a step-by-step guide).
+JAX provides a multi-purpose TPU profiler with a bunch of useful tools for understanding what's happening on the TPU when a program is run. You can using the `jax.profiler` module to trace a program as it's running and record everything from the duration of each subcomponent, the HLO of each program, memory usage, and more. For example, this code will dump a trace to a file in `/tmp/tensorboard` that can be viewed in TensorBoard ([here](https://docs.jax.dev/en/latest/profiling.html#tensorboard-profiling) is a step-by-step guide).
 
 ```python
 import jax

@@ -185,32 +185,33 @@ $$
 
 ### Attention
 
-For multi-headed attention, let us assume equal head dimension H for **Q**,**K**,**V** projections, and estimate the cost of the **QKVO** matmuls:
+For the generic grouped-query attention case with different **Q** and **KV** head numbers, let us assume equal head dimension H for **Q**,**K**,**V** projections, and estimate the cost of the **QKVO** matmuls:
 
 $$
 \begin{array}{ccc}
 \textrm{operation} & \textrm{train FLOPs} & \textrm{params} \\
 \hline \\
 A[B,T,\red{D}] \cdot W_{Q}[\red{D}, N, H] & 6BTDNH & DNH \\[10pt]
-A[B,T,\red{D}] \cdot W_{K}[\red{D}, N, H] & 6BTDNH & DNH \\[10pt]
-A[B,T,\red{D}] \cdot W_{V}[\red{D}, N, H] & 6BTDNH & DNH \\[10pt]
+A[B,T,\red{D}] \cdot W_{K}[\red{D}, K, H] & 6BTDKH & DKH \\[10pt]
+A[B,T,\red{D}] \cdot W_{V}[\red{D}, K, H] & 6BTDKH & DKH \\[10pt]
 A[B,T,\red{N}, \red{H}] \cdot W_{O}[\red{N}, \red{H}, D] & 6BTDNH & DNH \\[10pt]
-\hline \\
-& 24BTDNH & 4DNH
+\hline \\ & 12BTD(N+K)H & 2D(N+K)H
 \end{array}
 $$
 
-The dot-product attention operation is more subtle, effectively being a $$TH \cdot HS$$ matmul batched over the $$B$$, $$N$$ dimensions, a softmax, and a $$TS \cdot SH$$ matmul again batched over the $$B$$, $$N$$ dimensions. We highlight the batched dims in blue:
+The dot-product attention operation is more subtle, effectively being a $$TH \cdot HS$$ matmul batched over the $$B$$, $$K$$ dimensions, a softmax, and a $$TS \cdot SH$$ matmul again batched over the $$B$$, $$K$$ dimensions. We highlight the batched dims in blue:
 
 $$
 \begin{array}{cc}
-\textrm{operation} & \textrm{train FLOPs}                                                               \\
-\hline                                                                                                  \\[3pt]
-Q[\blue{B}, T, \blue{N}, \red{H}] \cdot K[\blue{B}, S, \blue{N}, \red{H}]  & 6BTSNH                     \\[3pt]
-\textrm{softmax}_S \;\; L[\blue{B}, T, S, \blue{N}]                        & \gray{O(BTSN)}             \\[3pt]
-S[\blue{B}, T, \red{S}, \blue{N}] \cdot V[\blue{B}, \red{S}, \blue{N}, H]        & 6BTSNH               \\[3pt]
-\hline                                                                                                  \\
-                                                                           & \approx 12BTSNH = 12BT^2NH \\
+\textrm{operation} & \textrm{train FLOPs} \\
+\hline \\[3pt]
+Q[\blue{B}, T, \blue{K}, G, \red{H}] \cdot K[\blue{B}, S, \blue{K}, \red{H}]
+& 6BTSKGH = 6BTSNH  \\[3pt]
+\textrm{softmax}_S \;\; L[B, T, S, K, G] & \gray{O(BTSKG) = O(BTSN)} \\[3pt]
+S[\blue{B}, T, \red{S}, \blue{K}, G] \cdot V[\blue{B}, \red{S}, \blue{K}, H] 
+& 6BTSKGH = 6BTSNH \\[3pt]
+\hline \\
+& \approx 12BTSNH = 12BT^2NH \\
 \end{array}
 $$
 
@@ -233,15 +234,15 @@ If we neglect the cost of dot-product attention for shorter-context training, th
 
 $$
 \begin{align*}
-18BTDF + 24BTDNH = 6 *BT * (3DF + 4DNH) \\ = 6 * \textrm{num tokens} * \textrm{parameter count}
+(18BTDF + 12BTD(N+K)H)L = 6 *BT * (3DF + 2D(N+K)H)L \\ = 6 * \textrm{num tokens} * \textrm{parameter count}
 \end{align*}
 $$
 
-Leading to a famous rule of thumb for estimating Transformer FLOP count, ignoring the attention FLOPs. (Unembedding is another simple matmul with $6BSEV$ FLOPs and $EV$ params, and follows the same rule of thumb.)
+Leading to a famous rule of thumb for estimating dense Transformer FLOP count, ignoring the attention FLOPs. (Unembedding is another simple matmul with $6BSDV$ FLOPs and $DV$ params, and follows the same rule of thumb.)
 
 ### Fractional cost of attention with context length
 
-If we do account for dot-product attention above and assume $$F=4D$$ and $$D=NH$$ (as is typical):
+If we do account for dot-product attention above and assume $$F=4D$$, $$D=NH$$ (as is typical) and $$N=K$$:
 
 $$\small{\frac{\textrm{attention FLOPs}}{\textrm{matmul FLOPs}} = \frac{12BT^2NH}{18BTDF + 24BTDNH} = \frac{12BT^2D}{4*18 BTD^2 + 24 BTD^2} = \frac{12BT^2D}{96 BTD^2} = \frac{T}{8D}}$$
 
@@ -369,7 +370,17 @@ This is purely a question of when $$24BTDNH == 12BT^2NH$$. Simplifying we get $$
 
 {% details Click here for the answer. %}
 
-From the spec sheet [here](https://lenovopress.lenovo.com/lp1814.pdf), we find 3,026 TFLOPs/s of FP8 performance with sparsity, or typically half this (`1.513e15` FLOPs/s) without sparsity. 2.79M H800 hours means `2.79e6 * 1.513e15 * 60 * 60 = 1.52e25` total FLOPs. Given the activated parameter count of 37B, this training run should have used about `6 * 37e9 * 14.8e12 = 3.3e24` FLOPs. That means the FLOPs utilization is about `3.3e24 / 1.52e25 = 21.7%`. 
+From the spec sheet [here](https://lenovopress.lenovo.com/lp1814.pdf), we find 3,026 TFLOPs/s of FP8 performance with sparsity, or typically half this (`1.513e15` FLOPs/s) without sparsity. 2.79M H800 hours means `2.79e6 * 1.513e15 * 60 * 60 = 1.52e25` total FLOPs. Given the activated parameter count of 37B, this training run should have used about `6 * 37e9 * 14.8e12 = 3.3e24` FLOPs. That means the FLOPs utilization is about `3.3e24 / 1.52e25 = 21.7%`.
+
+{% enddetails %}
+
+**Question 8:** Mixture of Experts (MoE) models have $E$ copies of a standard dense MLP block, and each token activates $k$ of these experts. What batch size in tokens is required to be compute-bound for an MoE with weights in int8 on TPU v5e? For DeepSeek, which has 256 (routed) experts and $k=8$, what is this number?
+
+{% details Click here for the answer. %}
+
+Because we have $E$ copies of each expert, in int8, we need to load $E \cdot D \cdot F$ bytes. Because each token activates $k$ experts, we have $2\cdot k \cdot B \cdot D \cdot F$ FLOPs. To be compute-bound with bfloat16 FLOPs, we need an arithmetic intensity over 240 which happens when $(2\cdot k \cdot BDF) / EDF > 240$ or $k \cdot B / E > 120$. 
+
+Therefore, we need $B > 120 \cdot E / k$ to be compute bound. For DeepSeek, this gives us $B > 120 \cdot 256 / 8 = 3840$. This is a remarkably large batch size at generation time.
 
 {% enddetails %}
 

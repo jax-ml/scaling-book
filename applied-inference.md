@@ -138,7 +138,7 @@ Strictly looking at memory bandwidth then, our step time is basically `(KV size 
 
 There's one caveat here which is to check if we might be ICI bound on our matmuls. We could dedicate 2 axes to it here, so we're ICI bound in theory when $Y > 2 * F / 2550 = 2 * 28672 / 2550 = 22$, so we're golden!
 
-If we were to run on a `4x4`, we'd still be fine ICI-wise, so our latency would drop to `17 / 2 = 8.5ms`, but our throughput would remain the same.
+If we were to run on a `4x4`, we'd still be fine ICI-wise, so our latency would drop to `17 / 2 = 8.5ms`, but our throughput per-chip would remain the same.
 
 {% enddetails %}
 

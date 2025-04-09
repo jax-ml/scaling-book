@@ -390,7 +390,7 @@ Therefore, we need $B > 120 \cdot E / k$ to be compute bound. For DeepSeek, this
 
 ### Appendix A: How does Flash Attention work?
 
-The traditional objection to scaling Transformers to very long context is that the attention FLOPs and memory usage scale quadratically with context length. While it's true that the attention QK product has shape $[B, S, T, N]$ where B is the batch size, S and T are the Q and K sequence dims, and H is the number of heads, this claim comes with some serious caveats:
+The traditional objection to scaling Transformers to very long context is that the attention FLOPs and memory usage scale quadratically with context length. While it's true that the attention QK product has shape $[B, S, T, N]$ where B is the batch size, S and T are the Q and K sequence dims, and N is the number of heads, this claim comes with some serious caveats:
 
 1. As we noted in Section 4, even though this is quadratic, the attention FLOPs only dominated when $$S > 8 \cdot D$$, and especially during training the memory of a single attention matrix is small compared to all of the weights and activation checkpoints living in memory, especially when sharded.
 2. We don't need to materialize the full attention matrix in order to compute attention! We can compute local sums and maxes and avoid ever materializing more than a small chunk of the array. While the total FLOPs is still quadratic, we drastically reduce memory pressure.

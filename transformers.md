@@ -260,7 +260,7 @@ Compared to a dense model, an MoE introduces new comms, primarily two AllToAlls 
 
 ### Gradient checkpointing
 
-Backpropagation as an algorithm trades memory for compute. Instead of a backward pass requiring $$O(n_\text{layers}^2)$$ FLOPs, **it requires $$O(n_\text{layers})$$ memory**, saving all intermediate activations generated during the forward pass. While this is better than quadratic compute, it's incredibly expensive memory-wise: a model with $$B * T=4M$$ (4M total tokens per batch), L=64, and D=8192 that avoids all unnecessary backward pass compute would have to save roughly $$2 * 20 * B * T * D * L = 84TB$$ of activations in bfloat16. 20 comes from (roughly) counting every intermediate node in the Transformer diagram above, since e.g.
+Backpropagation as an algorithm trades memory for compute. Instead of a backward pass requiring $$O(n_\text{layers}^2)$$ FLOPs, **it requires $$O(n_\text{layers})$$ memory**, saving all intermediate activations generated during the forward pass. While this is better than quadratic compute, it's incredibly expensive memory-wise: a model with $$B * T=4M$$ (4M total tokens per batch), L=64, and D=8192 that avoids all unnecessary backward pass compute would have to save roughly $$2 * 20 * B * T * D * L$$ = 84TB of activations in bfloat16. 20 comes from (roughly) counting every intermediate node in the Transformer diagram above, since e.g.
 
 $$f(x) = \exp(g(x))$$
 

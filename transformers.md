@@ -409,7 +409,7 @@ The max is subtracted for numerical stability and can be added without affecting
 
 $$L^1 = \sum_i \exp(Q \cdot K_i^1 - \max_j Q \cdot K_j^1)$$
 
-$$L^2 = \sum_i \exp(Q \cdot K_i^2 - \max_j Q \cdot K_j^1)$$
+$$L^2 = \sum_i \exp(Q \cdot K_i^2 - \max_j Q \cdot K_j^2)$$
 
 Then we can combine these into the full softmax sum for these two chunks together by using
 

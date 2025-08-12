@@ -55,7 +55,7 @@ toc:
   - subsections:
     - name: "Auto sharding mode"
     - name: “Explicit sharding mode”
-    - name: "Manual sharding mode via jax.shard_map"
+    - name: "Manual sharding mode via shard_map"
   - name: "Worked Problems"
 
 # Below is an example of injecting additional post-specific styles.
@@ -227,7 +227,7 @@ print(jax.typeof(out))  # bfloat16[8@X,8192@Y]
 
 Auto mode and Explicit mode can be composed via `jax.sharding.auto_axes` and `jax.sharding.explicit_axes` APIs. This is a [great doc to read](https://docs.jax.dev/en/latest/notebooks/explicit-sharding.html) for more information.
 
-<h3 id="shard-map-explicit-parallelism-control-over-a-program">shard_map: explicit parallelism control over a program</h3>
+<h3 id="manual-sharding-mode-via-shard_map">shard_map: explicit parallelism control over a program</h3>
 
 While Shardy is the "compiler take the wheel" mode, jax [shard_map](https://jax.readthedocs.io/en/latest/jep/14273-shard-map.html) puts everything in your hands. You specify the sharding of the inputs, like in jax.jit, but then you write all communication explicitly. Whereas `jax.jit` leaves you with a global cross-device view of the program, `shard_map` gives you a local per-device view.
 

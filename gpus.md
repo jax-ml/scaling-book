@@ -254,7 +254,7 @@ For the Hopper generation (NVLink 4.0), each NVLink link has 25GB/s of full-dupl
 |  **4.0**   |   **3.0**    |     Hopper     |                  25                  |         18         |                     450                      |             8             |          4          |
 |  **5.0**   |   **4.0**    |   Blackwell    |                  50                  |         18         |                     900                      |           8/72            |        2/18         |
 
-Blackwell (B200) has nodes of 8 GPUs, but plans to support larger NVLink domains with GB200, up to 72 or even 576 chips. We show details for both the 8 and 72 GPU nodes.
+Blackwell (B200) has nodes of 8 GPUs. GB200NVL72 support larger NVLink domains of 72 GPUs. We show details for both the 8 and 72 GPUs systems.
 
 ### Quiz 2: GPU nodes
 
@@ -684,7 +684,7 @@ This is also a dense model so in general these things are pretty trivial. The 16
 Let’s step back and come up with a general summary of what we’ve learned so far:
 
 * **Data parallelism or FSDP (ZeRO-1/3) requires a local batch size of about 2500 tokens per GPU**, although in theory in-network reductions + pure DP can reduce this somewhat.  
-* **Tensor parallelism is compute-bound up to about 8-ways** but we lack the bandwidth to scale much beyond this before becoming comms-bound. This mostly limits us to a single node.  
+* **Tensor parallelism is compute-bound up to about 8-ways** but we lack the bandwidth to scale much beyond this before becoming comms-bound. This mostly limits us to a single nvlink domain (i.e. single-node or need to use GB200NVL72 with to 72 GPUs).
 * **Any form of model parallelism that spans multiple nodes can further reduce the cost of FSDP**, so we often want to mix PP + EP + TP to cross many nodes and reduce the FSDP cost.   
 * **Pipeline parallelism works well if you can handle the code complexity of zero-bubble pipelining and keep batch sizes fairly large to avoid data-parallel bottlenecks.** Pipelining usually makes ZeRO-3 impossible (since you would need to AllGather on each pipeline stage), but you can do ZeRO-1 instead.
 
@@ -767,11 +767,11 @@ There’s a great deal of good reading on GPUs, but some of my favorites include
 
 ## Appendix A: How does this change with GB200?
 
-Blackwell introduces a bunch of major networking changes, including NVLink 5 with twice the overall bandwidth (900GB/s). B200 still has 8-GPU nodes, just like H100s, but GB200 systems (which combine B200 GPUs with Grace CPUs) introduce much larger nodes (72 GPUs in NVL72 and in theory up to 576).   
+Blackwell introduces a bunch of major networking changes, including NVLink 5 with twice the overall bandwidth (900GB/s). B200 still has 8-GPU nodes, just like H100s, but GB200 systems (which combine B200 GPUs with Grace CPUs) introduce much larger nvlink domain (72 GPUs in NVL72 and in theory up to 576). This bigger nvlink domain allows bigger TP sizes.
 
-{% include figure.liquid path="assets/gpu/b200-node.png" class="img-fluid" caption="<b>Figure:</b> a diagram showing how a GB200 NVL72 node is constructed, with 18 switches and 72 GPUs." %}
+{% include figure.liquid path="assets/gpu/b200-node.png" class="img-fluid" caption="<b>Figure:</b> a diagram showing how a GB200 NVL72 unit is constructed, with 18 switches and 72 GPUs." %}
 
-Because Blackwell doubles the total FLOPs and bandwidth, none of our rooflines really change. We have 2x FLOPs with 2x bandwidth. However, larger nodes help with latency.
+Because Blackwell doubles the total FLOPs and bandwidth, none of our rooflines really change. We have 2x FLOPs with 2x bandwidth. However, larger nvlink domain help with latency.
 
 {% include figure.liquid path="assets/gpu/b200-superpod.png" class="img-fluid" caption="<b>Figure:</b> a diagram showing how a large GB200 NVL576 SuperPod could be constructed from 72-GPU nodes." %}
 

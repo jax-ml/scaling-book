@@ -89,7 +89,7 @@ _styles: >
   }
 ---
 
-_GPUs started out rendering video games, but since deep learning took off in the 2010s, they've started looking more and more like dedicated matrix multiplication machines – in other words, just like TPUs._<d-footnote>Before the deep learning boom, GPUs ("Graphics Processing Units") did, well, graphics – mostly for video games. Video games represent objects with millions of little triangles, and the game renders (or "rasterizes") these triangles into a 2D image that gets displayed on a screen 30-60 times a second (this frequency is called the framerate). Rasterization involves trillions of "ray-triangle intersection", calculating which triangles in the world intersect with a ray shot outwards from each pixel. As you can imagine, this is very expensive, and it’s just the beginning. You then have to color each pixel by combining the colors of possibly several semi-opaque triangles that intersect the ray. GPUs were designed to do these operations extremely fast, with an eye towards versatility; you need to run many different GPU workloads (called "shaders") at the same time, with no single operation dominating. As a result, consumer graphics-focused GPUs can do matrix multiplication, but it’s not their primary function.</d-footnote> _Both TPUs and GPUs act like matrix multiplication accelerators attached to a CPU, with similar compute and memory hierarchies. They differ – in a very broad sense – in how "general" the hardware itself aims to be. TPUs are cheap, predictable, and good if used "as intended". GPUs are more complex but more often "just work" when applied to new tasks._
+_GPUs started out rendering video games, but since deep learning took off in the 2010s, they've started looking more and more like dedicated matrix multiplication machines – in other words, just like TPUs._<d-footnote>Before the deep learning boom, GPUs ("Graphics Processing Units") did, well, graphics – mostly for video games. Video games represent objects with millions of little triangles, and the game renders (or "rasterizes") these triangles into a 2D image that gets displayed on a screen 30-60 times a second (this frequency is called the framerate). Rasterization involves projecting these triangles into the coordinate frame of the camera and calculating which triangles overlap which pixels, billions of times a second. As you can imagine, this is very expensive, and it’s just the beginning. You then have to color each pixel by combining the colors of possibly several semi-opaque triangles that intersect the ray. GPUs were designed to do these operations extremely fast, with an eye towards versatility; you need to run many different GPU workloads (called "shaders") at the same time, with no single operation dominating. As a result, consumer graphics-focused GPUs can do matrix multiplication, but it’s not their primary function.</d-footnote> _Both TPUs and GPUs act like matrix multiplication accelerators attached to a CPU, with similar compute and memory hierarchies. They differ – in a very broad sense – in how "general" the hardware itself aims to be. TPUs are cheap, predictable, and good if used "as intended". GPUs are more complex but more often "just work" when applied to new tasks._
 
 ## What Is a GPU?
 
@@ -101,7 +101,7 @@ Unlike a TPU, which has at most 2 independent "Tensor Cores"<d-footnote>TPU core
 
 Here’s a more detailed view of a B200 SM:
 
-{% include figure.liquid path="assets/gpu/broadwell-sm.png" class="img-small" caption="<b>Figure:</b> a diagram of a B200 SM (<a href='https://wccftech.com/nvidia-hopper-gh100-gpu-official-5nm-process-worlds-fastest-hpc-chip-80-billion-transistors-hbm3-memory/'>source</a>) showing the 4 <i>subpartitions</i>, each containing a Tensor Core, Warp Scheduler, Register File, and sets of CUDA Cores of different precisions. The 'L1 Data Cache' near the bottom is the 256kB SMEM unit. The B200 also adds a substantial amount of Tensor Memory (TMEM) for feeding the bulky Tensor Cores." %}
+{% include figure.liquid path="assets/gpu/blackwell-sm.png" class="img-small" caption="<b>Figure:</b> a diagram of a B200 SM (<a href='https://wccftech.com/nvidia-hopper-gh100-gpu-official-5nm-process-worlds-fastest-hpc-chip-80-billion-transistors-hbm3-memory/'>source</a>) showing the 4 <i>subpartitions</i>, each containing a Tensor Core, Warp Scheduler, Register File, and sets of CUDA Cores of different precisions. The 'L1 Data Cache' near the bottom is the 256kB SMEM unit. The B200 also adds a substantial amount of Tensor Memory (TMEM) for feeding the bulky Tensor Cores." %}
 
 Each SM is broken up into 4 identical quadrants, which NVIDIA calls "SM subpartitions", each containing a Tensor Core (matrix multiplication unit), 16k 32-bit registers, and a set of SIMD vector arithmetic lanes NVIDIA calls "CUDA Cores". The core component of each partition is arguably the Tensor Core, which performs matrix multiplications and makes up the vast majority of FLOPs/s, but it’s not the only component worth noting.
 
@@ -142,7 +142,7 @@ Here’s a helpful cheat sheet comparing GPU and TPU components:
 
 HBM is sometimes called GMEM (=Global Memory). Here is a summary of GPU specs for recent models:
 
-| GPU  | Generation |  SMs  | SMEM/SM (kB) | L2 Cache (MB) | Clock Speed (GHz) | DRAM (GB) | DRAM BW (TB/s) | BF16 TFLOPs | FP8/INT8 TFLOPs | FP4 TFLOPs |
+| GPU  | Generation |  SMs  | SMEM/SM (kB) | L2 Cache (MB) | Clock Speed (GHz) | DRAM (GB) | DRAM BW (TB/s) | BF16/FP16 TFLOPs | FP8/INT8 TFLOPs | FP4 TFLOPs |
 | :--- | :--------- | :---: | :----------: | :-----------: | :---------------: | :-------: | :------------: | :---------: | :-------------: | ---------- |
 | V100 | Volta      |  80   |      96      |       6       |     1.25/1.38     |    32     |      0.9       |      —      |        —        | —          |
 | A100 | Ampere     |  108  |     192      |      40       |     1.10/1.41     |    80     |      2.0       |     312     |       624       | —          |
@@ -170,7 +170,7 @@ As you’ve hopefully noticed, GPUs and TPUs look quite similar at a chip level.
 
 This difference in modularity on the one hand makes TPUs much cheaper to build and simpler to understand, but it also puts more burden on the compiler to do the right thing. Because TPUs have a single thread of control and only support vectorized VPU-wide instructions, the compiler needs to manually pipeline all memory loads and MXU/VPU work to avoid stalls. A GPU programmer can just launch dozens of different kernels, each running on a totally independent SMs. On the other hand, those kernels might get horrible performance because they are thrashing the L2 cache or failing to coalesce memory loads; because the hardware controls so much of the runtime, it becomes hard to reason about what’s going on behind the scenes. As a result, TPUs can often get closer to peak roofline performance with less work.
 
-**TPUs have a lot more fast cache memory.** TPUs also have a lot more VMEM than GPUs have SMEM, and this memory can be used for storing weights and activations in a way that lets them be loaded and used extremely fast. This can make them faster for LLM inference if you can consistently store or prefetch model weights into VMEM.
+**TPUs have a lot more fast cache memory.** TPUs also have a lot more VMEM than GPUs have SMEM (+TMEM), and this memory can be used for storing weights and activations in a way that lets them be loaded and used extremely fast. This can make them faster for LLM inference if you can consistently store or prefetch model weights into VMEM.
 
 ### Quiz 1: GPU hardware
 
@@ -341,7 +341,7 @@ For 4096 GPUs, we actually run out of ports, so we need to add another level of 
 
 ## How Do Collectives Work on GPUs?
 
-GPUs can perform all the same collectives as TPUs: ReduceScatters, AllGathers, AllReduces, and AllToAlls. Unlike TPUs, the way these work changes depending on whether they’re performed at the node level (over NVLink) or above (over InfiniBand). All these collectives are implemented by NVIDIA in the NCCL (pronounced "nickel") library which is open-sourced [here](https://github.com/NVIDIA/nccl). While NCCL uses a variety of implementations depending on latency requirements/topology ([details](https://github.com/NVIDIA/nccl/issues/1415#issuecomment-2310650081)), from here on, we’ll discuss a theoretically optimal model over a switched tree fabric.
+GPUs can perform all the same collectives as TPUs: ReduceScatters, AllGathers, AllReduces, and AllToAlls. Unlike TPUs, the way these work changes depending on whether they’re performed at the node level (over NVLink) or above (over InfiniBand). All these collectives are implemented by NVIDIA in the NCCL (pronounced "nickel") library which is open-sourced [here](https://github.com/NVIDIA/nccl). NVIDIA is also developing a new [NVSHMEM](https://developer.nvidia.com/nvshmem) library that overlaps with NCCL. While NCCL uses a variety of implementations depending on latency requirements/topology ([details](https://github.com/NVIDIA/nccl/issues/1415#issuecomment-2310650081)), from here on, we’ll discuss a theoretically optimal model over a switched tree fabric.
 
 ### Intra-node collectives
 
@@ -771,7 +771,7 @@ Blackwell introduces a bunch of major networking changes, including NVLink 5 wit
 
 {% include figure.liquid path="assets/gpu/b200-node.png" class="img-fluid" caption="<b>Figure:</b> a diagram showing how a GB200 NVL72 unit is constructed, with 18 switches and 72 GPUs." %}
 
-Because Blackwell doubles the total FLOPs and bandwidth, none of our rooflines really change. We have 2x FLOPs with 2x bandwidth. However, larger nvlink domain help with latency.
+Because Blackwell doubles the total FLOPs and bandwidth, none of our rooflines really change. We have 2x FLOPs with 2x bandwidth. However, larger NVLink domains help with latency since NVLink has better latency characteristics than InfiniBand.
 
 {% include figure.liquid path="assets/gpu/b200-superpod.png" class="img-fluid" caption="<b>Figure:</b> a diagram showing how a large GB200 NVL576 SuperPod could be constructed from 72-GPU nodes." %}
 

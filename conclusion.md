@@ -13,8 +13,8 @@ section_number: 11
 previous_section_url: "../jax-stuff"
 previous_section_name: "Part 10: JAX"
 
-next_section_url: ""
-next_section_name: "..."
+next_section_url: "../gpus"
+next_section_name: "Part 12: GPUs"
 
 giscus_comments: true
 
@@ -83,7 +83,6 @@ _styles: >
     margin-bottom: 0px;
   }
 ---
-
 **Thank you for reading this set of essays and congratulations on making it all the way to the end.** Before we conclude, a few acknowledgments:
 
 ## Acknowledgments
@@ -101,6 +100,8 @@ We'd also like to thank many others gave critical feedback throughout the proces
 
 **Thank you all!**
 
+<p markdown=1 class="announce">Before you go, you might also enjoy reading the new [Section 12](../gpus) on NVIDIA GPUs!</p>
+
 ## Further Reading
 
 There is a bunch of related writing, including the following:
@@ -115,6 +116,7 @@ There is a bunch of related writing, including the following:
 * [**Huggingface Ultra-Scale Playbook**](https://huggingface.co/spaces/nanotron/ultrascale-playbook): something of a GPU analog to this book, this talks more at depth about how PyTorch implements parallelism techniques and memory-saving techniques during training.
 * [**Transformer Inference Arithmetic**](https://kipp.ly/transformer-inference-arithmetic/): a blog with many of the same ideas as this book and some excellent illustrations.
 * [**Stanford CS336 Slides and Videos**](https://stanford-cs336.github.io/spring2025/index.html#coursework): a fantastic Stanford course covering many details of LLM training and serving, with some useful exercises. Assignments 1 and 2 are particularly relevant.
+* [**Stas Bekman's ML Engineering Handbook**](https://github.com/stas00/ml-engineering): a highly practical guide to ML infrastructure, covering topics not addressed in this book like how to negotiate with cloud providers, cluster management, and empirical measurements of GPU throughput.
 
 There remains a lot of room for comprehensive writing in this area, so
 we hope this manuscript encourages more of it! We also believe that

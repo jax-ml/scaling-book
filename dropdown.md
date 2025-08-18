@@ -29,4 +29,6 @@ children:
     permalink: /jax-stuff
   - title: Part 11. Conclusions
     permalink: /conclusion
+  - title: Part 12. GPUs
+    permalink: /gpus
 ---

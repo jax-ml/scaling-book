@@ -20,6 +20,7 @@
   --global-divider-color: rgba(0, 0, 0, 0.1);
   --global-algorithm-color: #fffaf2;
   --global-takeaway-color: #d2e7fd;
+  --global-announce-color: #fdf8d2;
   --global-card-bg-color: #{$white-color};
   --global-highlight-color: #{$red-color-dark};
   --global-back-to-top-bg-color: rgba(
@@ -94,6 +95,7 @@ html[data-theme="dark"] {
   --global-divider-color: #424246;
   --global-algorithm-color: #322121;
   --global-takeaway-color: #4b4b4b;
+  --global-announce-color: #4b4b4b;
   --global-card-bg-color: #{$grey-900};
   --global-back-to-top-bg-color: rgba(
     #{color.channel($white-color, "red", $space: rgb)},

@@ -190,7 +190,7 @@ Let's stick to our setting from above and say we want to train LLaMA 3-70B with 
 
 {% details Click here for the answer, once you've thought about it! %}
 
-**Answer**: First let's check to see if this will even fit. We know that we'll be comms-bound if our per-chip batch size is less than $$2 \cdot 2550^2 / F = 453$$. As we saw above, we're slightly above this. So that's great! Now to pick the optimal amount of FSDP, we can use the formula
+**Answer**: First let's check to see if this will even fit. We know that we'll be comms-bound if our per-chip batch size is less than $2550^2 / 2F = 113$. As we saw above, we're slightly above this. So that's great! Now to pick the optimal amount of FSDP, we can use the formula
 
 $$X_{opt} = \sqrt{\frac{2BN}{F}} = \sqrt{\frac{2 \cdot 4.19e6 \cdot 8960}{28672}} = 1618$$
 

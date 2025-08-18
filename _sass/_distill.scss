@@ -196,11 +196,6 @@ d-appendix {
   }
 }
 
-.takeaway {
-  background-color: #d2e7fd;
-  padding-left: 10px;
-}
-
 .img-small {
   max-width: 500px;
   display: block;
@@ -248,6 +243,13 @@ d-article d-contents nav div {
   background-color: var(--global-takeaway-color);
   padding: 10px;
   border-radius: 5px;
+}
+
+.announce {
+  background-color: var(--global-announce-color);
+  padding: 10px;
+  border-radius: 5px;
+  font-weight: 400;
 }
 
 .next-section {

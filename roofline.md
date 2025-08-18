@@ -51,7 +51,7 @@ authors:
 #     for hyperlinks within the post to work correctly.
 #   - please use this format rather than manually creating a markdown table of contents.
 toc:
-  
+
   - name: Where Does the Time Go?
   - subsections:
     - name: "Visualizing rooflines"
@@ -89,11 +89,11 @@ $$\begin{equation}
 T_\text{math} = \frac{\text{Computation FLOPs}}{\text{Accelerator FLOPs/s}}
 \end{equation}$$
 
-For instance, an NVIDIA H100 can perform about 9.89e14 bfloat16<d-footnote>bf16 is short for <a href="https://en.wikipedia.org/wiki/Bfloat16_floating-point_format">bfloat16</a>, a 16-bit floating point format often used in ML.</d-footnote> FLOPs/s while a TPU v6e can perform 9.1e14 FLOPs/s. That means doing 1e12 FLOPs on an H100 will take (roughly) `1e12 / 9.89e14 = 1.01ms` and `1e12 / 9.1e14 = 1.1ms` on a TPU v6e.<d-footnote>Note that these chips are priced differently, and this comparison does not normalize to cost.</d-footnote>
+For instance, an NVIDIA H100 can perform about 9.89e14 bfloat16<d-footnote>bf16 is short for <a href="https://en.wikipedia.org/wiki/Bfloat16_floating-point_format">bfloat16</a>, a 16-bit floating point format often used in ML.</d-footnote> FLOPs/s while a TPU v6e can perform 9.1e14 FLOPs/s.<d-footnote>H100s and B200s can usually only achieve around 80-85% of the claimed peak FLOPs, while TPUs can get closer to 95% in normal use.</d-footnote> That means doing 1e12 FLOPs on an H100 will take (roughly) `1e12 / 9.89e14 = 1.01ms` and `1e12 / 9.1e14 = 1.1ms` on a TPU v6e.<d-footnote>Note that these chips are priced differently, and this comparison does not normalize to cost.</d-footnote>
 
 **Communication within a chip:** *Within an accelerator*, tensors need to be transferred between on-chip memory (HBM) and the compute cores. You'll see the bandwidth of this link referred to as "HBM bandwidth"<d-footnote>NVIDIA also calls this "memory bandwidth."</d-footnote> On an H100, [this is about 3.35TB/s](https://www.nvidia.com/en-us/data-center/h100/) and on TPU v6e [this is about 1.6TB/s](https://cloud.google.com/tpu/docs/v6e).
 
-**Communication between chips:**  When we distribute a model *across multiple accelerators*, tensors frequently need to be transferred between them. There are often a few options for this on our hardware (ICI, DCN, and PCIe), each with different bandwidths. 
+**Communication between chips:**  When we distribute a model *across multiple accelerators*, tensors frequently need to be transferred between them. There are often a few options for this on our hardware (ICI, DCN, and PCIe), each with different bandwidths.
 
 Whether the communication is within a chip or between chips, we measure this in bytes/s and estimate the total communication time with:
 
@@ -152,7 +152,7 @@ $$\begin{equation}
 \text{Intensity}(\text{matmul}) = \frac{2BDF}{2BD + 2DF + 2BF} = \frac{BDF}{BD + DF + BF}
 \end{equation}$$
 
-We can get a nice simplification if we assume our local "batch size" $B$ is small relative to $D$ and $F$. Then we get
+We can get a nice simplification if we assume our "batch size" $B$ is small relative to $D$ and $F$. Then we get
 
 $$\begin{equation}
 \frac{BDF}{BD + DF + BF} \approxeq \frac{BDF}{DF} = B
@@ -162,9 +162,9 @@ $$\begin{equation}
 \text{Intensity}(\text{matmul}) > \text{Intensity}(\text{TPU}) \implies B > \frac{1.97e14}{8.20e11} = 240
 \end{equation}$$
 
-This is a reasonable assumption for Transformer matmuls since for most of our models we have our local batch size in tokens $$B < 1024$$ but $D$ and $F > 8000$. Thus we become compute-bound when our local batch size is greater than 240 tokens, a very simple rule!
+This is a reasonable assumption for Transformer matmuls since we typically have a local (per-replica) batch size $B < 1024$ tokens (*not sequences*) but $D$ and $F > 8000$. Thus we generally become compute-bound when our per-replica<d-footnote>We say per-replica because, if we do some kind of model sharding to increase the number of chips used in the matmul, we scale both our available compute and memory bandwidth by the same amount. Thus the critical batch size is true per independent copy of the model weights.</d-footnote> batch size is greater than 240 tokens, a very simple rule!
 
-<p markdown=1 class="takeaway">**Takeaway:** for a bfloat16 matmul to be compute-bound on most TPUs, we need our local batch size in tokens to be greater than 240.</p>
+<p markdown=1 class="takeaway">**Takeaway:** for a bfloat16 matmul to be compute-bound on most TPUs, we need our per-replica token batch size to be greater than 240.<d-footnote>Note that this is _not_ the batch size in the usual sense, where it means the batch size in sequences. It turns out most rooflines depend purely on the number of tokens, whether they belong to the same or different sequences. For instance if you have a batch size of 512 sequences of 4096 tokens on 128 GPUs, you have a total batch size of `512 * 4096 = 2M` tokens, and a local batch size of 16k tokens.</d-footnote></p>
 
 This comes with a few notable caveats we'll explore in the problems below, particularly with respect to quantization (e.g., if we quantize our activations but still do full-precision FLOPs), but it's a good rule to remember. For GPUs, this number is slightly higher (closer to 300), but the same conclusion generally holds. When we [decompose a big matmul into smaller matmuls](https://docs.jax.dev/en/latest/pallas/tpu/matmul.html#your-first-matrix-multiplication-kernel), the tile sizes also matter.<d-footnote>When we do a large matrix multiplication, we need to break it down into smaller tiles which fit into VMEM/SMEM/TMEM, the higher-bandwidth on-chip memory. This causes us to load chunks multiple times, so it's no longer quite true that we only load $O(N^2)$ bytes. Consider an $(m, k) \cdot (k, n)$ matmul with tile sizes $bm$, $bk$, $bm$. Let $tm = m / bm$, etc. Then the total FLOPs is $2 \cdot tm \cdot tn \cdot tk \cdot m \cdot bk \cdot bm$ and the total bytes are $2 \cdot tm \cdot tn \cdot (tk \cdot (bm \cdot bk + bk \cdot bn) + 2 \cdot bm \cdot bn)$. Ignoring the last term, we have an intensity of $bm \cdot bn / (bm + bn)$, which is similar to the above.</d-footnote> We'll discuss the lower-level GPU and TPU details in the [next section](../tpus).
 
@@ -186,14 +186,14 @@ Therefore we become compute-bound (now with respect to the inter-chip network) w
 
 ## A Few Problems to Work
 
-**Question 1 [int8 matmul]:** Say we want to do $X[B, D] \cdot_D Y[D, F] \rightarrow Z[B, F]$ in int8 precision (1 byte per parameter) instead of bfloat16.<d-footnote>Here and throughout we'll use the notation $A \cdot_D B$ to indicate that the multiplication is performing a contraction over the D dimension. This is an abuse of einsum notation.</d-footnote>
+**Question 1 [int8 matmul]:** Say we want to do the matmul $X[B, D] \cdot_D Y[D, F] \rightarrow Z[B, F]$ in int8 precision (1 byte per parameter) instead of bfloat16.<d-footnote>Here and throughout we'll use the notation $A \cdot_D B$ to indicate that the multiplication is performing a contraction over the D dimension. This is an abuse of einsum notation.</d-footnote>
 
-1. How many bytes need to be loaded from memory? How many need to be written back to memory? 
-2. How many total OPs are performed? 
+1. How many bytes need to be loaded from memory? How many need to be written back to memory?
+2. How many total OPs are performed?
 3. What is the arithmetic intensity?
 4. What is a roofline estimate for $T_\text{math}$ and $T_\text{comms}$? What are reasonable upper and lower bounds for the runtime of the whole operation?
 
-Assume our HBM bandwidth is `8.1e11` bytes/s and our int8 peak OPs/s is `3.94e14`.
+Assume our HBM bandwidth is `8.1e11` bytes/s and our int8 peak OPs/s is `3.94e14` (about 2x bfloat16).
 
 {% details Click here for the answer. %}
 
@@ -214,7 +214,42 @@ Again assuming B is small, we have 2BDF bfloat16 FLOPs but only DF weights (inst
 
 {% enddetails %}
 
-**Question 3:** For the problem above, make a roofline plot of peak FLOPs vs. B for several values of D and F.
+**Question 3:** Taking the setup from Question 2, make a roofline plot of peak FLOPs vs. $B$ for $F = D = 4096$ and $F = D = 1024$. *Use the exact number of bytes loaded, not an approximation.*
+
+{% details Click here for the answer. %}
+
+Here is the plot in question:
+
+{% include figure.liquid path="assets/img/roofline-plot-q3.png" class="img-fluid img-small" %}
+
+Note that both models eventually acheive the peak hardware FLOPs/s, but the larger D/F achieve it sooner. D=F=1024 almost doubles the critical batch size. The code to generate this figure is here:
+
+```py
+import matplotlib.pyplot as plt
+import numpy as np
+
+bs = np.arange(1, 512)
+
+def roofline(B, D, F):
+  total_flops = 2*B*D*F
+  flops_time = total_flops / 1.97e14
+  comms_time = (2*B*D + D*F + 2*B*F) / 8.2e11
+  total_time = np.maximum(flops_time, comms_time)
+  return total_flops / total_time
+
+roofline_big = roofline(bs, 4096, 4096)
+roofline_small = roofline(bs, 1024, 1024)
+
+plt.figure(figsize=(8, 4))
+plt.plot(bs, roofline_big, label='F=D=4096')
+plt.plot(bs, roofline_small, label='F=D=1024')
+plt.legend()
+plt.xlabel('batch size')
+plt.ylabel('peak bfloat16 FLOPs/s on TPU v5e')
+plt.grid()
+```
+
+{% enddetails %}
 
 **Question 4:** What if we wanted to perform $\text{int8[B, D]} *_D \text{int8[B, D, F]} \rightarrow \text{int8[B, F]}$ where we imagine having a different matrix for each batch element. What is the arithmetic intensity of this operation?
 

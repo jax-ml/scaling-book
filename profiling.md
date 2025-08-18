@@ -132,7 +132,7 @@ with jax.profiler.trace("/tmp/tensorboard"):
 
 # Now you can load TensorBoard in a Google Colab with
 #
-# !pip install tensorboard-plugin-profile
+# !pip install tensorboard tensorboard-plugin-profile
 # %load_ext tensorboard
 # %tensorboard --logdir=/tmp/tensorboard
 #
@@ -148,8 +148,8 @@ Here's an overview of what you can do in the profiler:
 
 Once in TensorBoard, the profiler has a few key tabs that help you understand your program:
 
-1. **Trace Viewer** shows a detailed timeline of what's actually happening on the TPU as a timeline. 
-2. **Graph Viewer** shows the HLO graph, letting you see what parts of the program feed into each other and how things are sharded. 
+1. **Trace Viewer** shows a detailed timeline of what's actually happening on the TPU as a timeline.
+2. **Graph Viewer** shows the HLO graph, letting you see what parts of the program feed into each other and how things are sharded.
 3. **Memory Profile and Memory Viewer:** these show how much memory your program is using.
 
 While it's slightly difficult to share profiles, [here](https://ui.perfetto.dev/#!/?s=fa9f13b487bde622707c1a503f9227c34594760a) is a Perfetto link that contains at least the Trace Viewer component for a simple Transformer. [This Colab](https://colab.research.google.com/drive/1_6krERgtolH7hbUIo7ewAMLlbA4fqEF8?usp=sharing) lets you generate the full JAX/TensorBoard trace and play around with it.
@@ -162,8 +162,8 @@ While it's slightly difficult to share profiles, [here](https://ui.perfetto.dev/
 
 The Trace Viewer shows a chronological timeline of all the actions on each TPU core. We're only looking at TPU:0 here, since typically all TPUs execute the same instructions. A few key notes:
 
-1. The top row (XLA Ops) shows the actual TPU operations (the names are HLO names). Everything else is an approximate trace based on `jax.named_scope`, `jax.named_call`, and the Python stack trace. 
-2. Noting the repeated blocks, we can isolate a single layer here. We can also see (from looking at the code/understanding how a Transformer works) what parts are attention and what parts are MLPs. 
+1. The top row (XLA Ops) shows the actual TPU operations (the names are HLO names). Everything else is an approximate trace based on `jax.named_scope`, `jax.named_call`, and the Python stack trace.
+2. Noting the repeated blocks, we can isolate a single layer here. We can also see (from looking at the code/understanding how a Transformer works) what parts are attention and what parts are MLPs.
 3. By clicking on an XLA op, we can view where in the code it comes from (useful for understanding the trace) and see links to the Graph viewer.
 
 <p markdown=1 class="takeaway">**Tip:** you can navigate the Trace Viewer using "video game" style controls, with A/D panning left and right, and W/S zooming in and out. These controls make navigating a lot easier.</p>
@@ -178,14 +178,14 @@ HLO isn't actually very hard to read, and it's very helpful for understanding wh
 
 Let's break this down into its pieces.
 
-* **Op Name**: fusion.3 
-  * A dot or fusion op is a set of operations containing at most 1 matrix multiplication and possibly a bunch of related pointwise VPU-ops. 
+* **Op Name**: fusion.3
+  * A dot or fusion op is a set of operations containing at most 1 matrix multiplication and possibly a bunch of related pointwise VPU-ops.
 * **Shape/layout**: `bf16[32,32,4096]`
-  * This is the output shape of the op. We can see the dtype is bf16 (2 bytes per parameter) and `[32,32,4096`] is the shape. 
+  * This is the output shape of the op. We can see the dtype is bf16 (2 bytes per parameter) and `[32,32,4096]` is the shape.
 * **Layout:** `{2,1,0:T(8,128)(2,1)}`
-  * `{2,1,0:T(8,128)(2,1)}` tells us the order of the axes in memory (column major, row major, etc.) and the array padding. More below. 
-* **Memory location:** S(1) 
-  * S(1) tells us this array lives in VMEM. S(0) (sometimes omitted) is HBM. S(2) and S(3) are other memory spaces. 
+  * `{2,1,0:T(8,128)(2,1)}` tells us the order of the axes in memory (column major, row major, etc.) and the array padding. More below.
+* **Memory location:** S(1)
+  * S(1) tells us this array lives in VMEM. S(0) (sometimes omitted) is HBM. S(2) and S(3) are other memory spaces.
 * **Arguments**: `bf16[32,32,8192]{2,1,0:T(8,128)(2,1)S(1)} %fusion.32`
   * This op has one input, a bf16 array called fusion.32 with a particular shape. This tells us what function feeds into this one.
 
@@ -279,10 +279,10 @@ which tells us the per-shard shape is `bf16[8192] * bf16[4096, 8192] -> bf16[409
 
 For reference, the initial version gets roughly 184ms / layer and the optimized profile gets 67 ms / layer. Once you've done this, try staring at the profile and see if you can answer these questions purely from the profile:
 
-- What sharding strategy is this?  
-- What is the batch size, $$d_\text{model}$$, $$d_\text{ff}$$?  
-- What fraction of time is spent on attention vs. the MLP block?  
-- What fraction of time should be spent on each op at the roofline? 
+- What sharding strategy is this?
+- What is the batch size, $$d_\text{model}$$, $$d_\text{ff}$$?
+- What fraction of time is spent on attention vs. the MLP block?
+- What fraction of time should be spent on each op at the roofline?
 
 **Note:** since this problem was written, the XLA compiler has gotten better. The initial version is now at roughly 90ms / layer and the optimized profile is only about 10ms / layer better (80 ms / layer). Still, it's worth playing with and seeing if you can do better.
 

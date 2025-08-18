@@ -111,7 +111,7 @@ $$
 
 - A dot product of $$x \cdot y$$ requires $$P$$ _adds_ and _multiplies_, or $$2P$$ floating-point operations total.
 - A matrix-vector product $$Ax$$ does $$N$$ dot-products along the rows of $$A$$, for $$2NP$$ FLOPs.
-- A matrix-matrix product $$AB$$ does $$M$$ matrix-vector products for each column of $$B$$, for $$2NPM$$ FLOPs total.
+- A matrix-matrix product $$AB$$ does a matrix-vector product for each of the $$M$$ columns of $$B$$, for $$2NPM$$ FLOPs total.
 - In general, if we have two higher dimensional arrays $$C$$ and $$D$$, where some dimensions are <span style="color:red">CONTRACTING</span> and some are <span style="color:blue">BATCHING</span>.  (e.g. $$C[\blue{GH}IJ\red{KL}], D[\blue{GH}MN\red{KL}]$$) then the FLOPs cost of this contraction is two times the product of all of the $$C$$ and $$D$$ dimensions where the batch and contraction dimensions are only counted once, (e.g. $$2\blue{GH}IJMN\red{KL}$$). Note that a dimension is only batching if it occurs in both multiplicands. (Note also that the factor of 2 won't apply if there are no contracting dimensions and this is just an elementwise product.)
 
 $$
@@ -208,7 +208,7 @@ $$
 Q[\blue{B}, T, \blue{K}, G, \red{H}] \cdot K[\blue{B}, S, \blue{K}, \red{H}]
 & 6BTSKGH = 6BTSNH  \\[3pt]
 \textrm{softmax}_S \;\; L[B, T, S, K, G] & \gray{O(BTSKG) = O(BTSN)} \\[3pt]
-S[\blue{B}, T, \red{S}, \blue{K}, G] \cdot V[\blue{B}, \red{S}, \blue{K}, H] 
+S[\blue{B}, T, \red{S}, \blue{K}, G] \cdot V[\blue{B}, \red{S}, \blue{K}, H]
 & 6BTSKGH = 6BTSNH \\[3pt]
 \hline \\
 & \approx 12BTSNH = 12BT^2NH \\
@@ -275,7 +275,7 @@ This by no means comprehensive. When using JAX, these are typically controlled b
 
 ### Key-Value (KV) caching
 
-As we'll see in [Section 7](../inference), LLM inference has two key parts, prefill and generation. 
+As we'll see in [Section 7](../inference), LLM inference has two key parts, prefill and generation.
 
 * **Prefill** processes a long prompt and saves its attention activations in a Key-Value Cache (KV Cache) for use in generation, specifically the key-value projections in the attention block.
 * **Generation** batches several of these KV caches together and samples tokens from each of them.
@@ -342,7 +342,7 @@ Following the rule above, we have I and J as contracting dimensions and K, L, M,
 
 {% details Click here for the answer. %}
 
-Self-attention requires loading the $$Q$$, $$K$$, and $$V$$ activations, then computing $$\text{softmax}(Q \cdot K) \cdot V$$, then writing the result back to HBM. This will be done with Flash Attention so there are some caveats to this math, but basically in bf16 self-attention performs 
+Self-attention requires loading the $$Q$$, $$K$$, and $$V$$ activations, then computing $$\text{softmax}(Q \cdot K) \cdot V$$, then writing the result back to HBM. This will be done with Flash Attention so there are some caveats to this math, but basically in bf16 self-attention performs
 
 $$\text{Q[B,T,N,H]} \rightarrow_\text{reshape} \text{Q[B, T, K, G, H]} \cdot \text{K[B, S, K, H]} \rightarrow \text{O[B, T, S, K, G]}$$
 
@@ -378,7 +378,7 @@ From the spec sheet [here](https://lenovopress.lenovo.com/lp1814.pdf), we find 3
 
 {% details Click here for the answer. %}
 
-Because we have $E$ copies of each expert, in int8, we need to load $E \cdot D \cdot F$ bytes. Because each token activates $k$ experts, we have $2\cdot k \cdot B \cdot D \cdot F$ FLOPs. To be compute-bound with bfloat16 FLOPs, we need an arithmetic intensity over 240 which happens when $(2\cdot k \cdot BDF) / EDF > 240$ or $k \cdot B / E > 120$. 
+Because we have $E$ copies of each expert, in int8, we need to load $E \cdot D \cdot F$ bytes. Because each token activates $k$ experts, we have $2\cdot k \cdot B \cdot D \cdot F$ FLOPs. To be compute-bound with bfloat16 FLOPs, we need an arithmetic intensity over 240 which happens when $(2\cdot k \cdot BDF) / EDF > 240$ or $k \cdot B / E > 120$.
 
 Therefore, we need $B > 120 \cdot E / k$ to be compute bound. For DeepSeek, this gives us $B > 120 \cdot 256 / 8 = 3840$. This is a remarkably large batch size at generation time.
 

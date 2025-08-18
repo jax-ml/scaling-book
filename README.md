@@ -10,7 +10,23 @@ The website uses a Distill-style Jekyll theme created by https://github.com/alsh
 
 ### Running Locally
 
-To build this repo locally, run
+To build this repo locally, you will need Ruby, ImageMagick, and Jupyter installed, which for MacOS can be installed with Homebrew using
+
+```
+brew install imagemagick ruby
+pip install jupyter
+```
+
+After this is installed, you should make sure the correct version of Ruby is found in PATH. You should have at least ruby 3.4.5 installed. You may need to add
+
+```
+if [ -d "/opt/homebrew/opt/ruby/bin" ]; then
+  export PATH=/opt/homebrew/opt/ruby/bin:$PATH
+  export PATH=`gem environment gemdir`/bin:$PATH
+fi
+```
+
+to your .bashrc to get the right version. After this, you should be able to clone and run the repository.
 
 ```
 git clone https://github.com/jax-ml/scaling-book.git
@@ -19,7 +35,7 @@ bundle install
 bundle exec jekyll serve
 ```
 
-To run on Mac OS, you may need to run some of the following as well: `brew install imagemagick`, `pip install jupyter`, `brew install ruby`, or `git config safe.bareRepository all`, depending on what errors you hit. Once you have run jekyll serve successfully, the book will be available at `localhost:4000/scaling-book`.
+Once you have run jekyll serve successfully, the book will be available at `http://127.0.0.1:4000/scaling-book`.
 
 To deploy to the GitHub Pages site (with repo write permision), run `sh bin/deploy`, which will take about 3 minutes to run.
 

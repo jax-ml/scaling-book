@@ -110,9 +110,9 @@ Taken together, we know that the local shape of the array (the size of the shard
 
 {% details Click here for the answer. %}
 
-$A[I_{XY}, J]$ shards the first dimension (I) along both the X and Y hardware axes. The number of bytes per device is the same as the previous sharding but the local shape is different. It is now $(\lvert I\rvert /(\lvert X\rvert \cdot \lvert Y\rvert), \lvert J\rvert)$. For the given example, the global shape is `fp32[1024, 4096]`, so the local shape is `fp32[64, 4096]`.
+$A[I_{XY}, J]$ shards the first dimension (I) along both the X and Y hardware axes. In this example, the local shape is $(\lvert I\rvert /(\lvert X\rvert \cdot \lvert Y\rvert), \lvert J\rvert)$. For the given example, the global shape is `fp32[1024, 4096]`, so the local shape is `fp32[64, 4096]`.
 
-Since each GPU has `4 * 64 * 4096 = 262kB`, this would take about `1e6 / 3.4e12 = 294ns`, although likely significantly more due to various overheads since this is so small.
+Since each GPU has `4 * 64 * 4096 = 1,048,576` bytes (or 1 MiB), this would take about `1e6 / 3.4e12 = 294ns`, although likely significantly more due to various overheads since this is so small.
 
 {% enddetails %}
 

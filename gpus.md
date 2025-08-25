@@ -420,11 +420,11 @@ $(N-1)/N \cdot \min(k/N, 1) \cdot B / (W \cdot N)$.<d-footnote>The true cost is 
 
 {% details Click here for the answer. %}
 
-**Answer:** From the above, we know that in the dense case, the cost is $B \cdot N / (W \cdot N)$, or $B / W$. If we know only $\frac{1}{2}$ the entries will be non-padding, we can send $B \cdot N \cdot k / (W \cdot N^2) = B \cdot k/N / W = B / (2 \cdot W)$, roughly half the overall cost.
+**Answer:** From the above, we know that in the dense case, the cost is $B \cdot (N-1) / (W \cdot N^2)$, or $B / (W \cdot N)$. If we know only $\frac{1}{2}$ the entries will be non-padding, we can send $B \cdot k/N / (W \cdot N) = B / (2 \cdot W \cdot N)$, roughly half the overall cost.
 
 {% enddetails %}
 
-<p markdown=1 class="takeaway">**Takeaway:** The cost of an AllToAll on an array of $B$ bytes on GPU within a single node is about $T_\text{comms} = (B \cdot (8 - 1)) / (8^2 \cdot W_\text{GPU egress}) \approx B / (8 \cdot W_\text{GPU egress})$. For a ragged (top-$k$) AllToAll, this is decreased further to $(B \cdot k) / (864 \cdot W_\text{GPU egress})$.</p>
+<p markdown=1 class="takeaway">**Takeaway:** The cost of an AllToAll on an array of $B$ bytes on GPU within a single node is about $T_\text{comms} = (B \cdot (8 - 1)) / (8^2 \cdot W_\text{GPU egress}) \approx B / (8 \cdot W_\text{GPU egress})$. For a ragged (top-$k$) AllToAll, this is decreased further to $(B \cdot k) / (64 \cdot W_\text{GPU egress})$.</p>
 
 **Empirical measurements:** here is an empirical measurement of AllReduce bandwidth over an 8xH100 node. The Algo BW is the measured bandwidth (bytes / runtime) and the Bus BW is calculated as $2 \cdot W \cdot (8 - 1) / 8$, theoretically a measure of the actual link bandwidth. You’ll notice that we do achieve close to 370GB/s, less than 450GB/s but reasonably close, although only around 10GB/device. This means although these estimates are theoretically correct, it takes a large message to realize it.
 

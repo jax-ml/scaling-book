@@ -76,7 +76,7 @@ _styles: >
   }
 ---
 
-*This section will look at what it takes to serve LLaMA-3 and how efficiently it can be done. As in the previous "applied" section, try to work out the answers on your with a pen and paper before looking them up!*
+*This section will look at what it takes to serve LLaMA-3 and how efficiently it can be done. As in the previous "applied" section, try to work out the answers on your own with a pen and paper before looking them up!*
 
 ## What's the LLaMA Serving Story?
 

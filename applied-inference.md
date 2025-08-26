@@ -212,13 +212,13 @@ Note that this is rather optimistic since it totally ignores the working memory 
 
 {% details Answer %}
 
-If we used a 4x8 slice in bfloat16, we would have 372GB remaining for KV caches, which would let us up our batch size to 140. Then since our step time would remaining the same, we would have a throughput of `16.54 / num_chips`, or
+If we used a 4x8 slice in bfloat16, we would have 372GB remaining for KV caches, which would let us up our batch size to 140. Then since our step time would remaining the same, we would have a throughput of `14.39 / num_chips`, or
 
 |       dtype       | QPS / chip |
 | :---------------: | :--------: |
-| bfloat16 (on 4x8) |    0.51    |
-|   int8 (on 4x4)   |    1.03    |
-|   int4 (on 2x4)   |    2.06    |
+| bfloat16 (on 4x8) |    0.44    |
+|   int8 (on 4x4)   |    0.90    |
+|   int4 (on 2x4)   |    1.80    |
 
 A further increase would give an even bigger win! The big takeaway is that **the smallest topology is not the most performance topology** in all cases, if we're limited by KV cache size.
 

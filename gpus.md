@@ -496,7 +496,7 @@ Here is a summary of the 1024-GPU DGX H100 SuperPod architecture:
 
 We use the term "Collective Bandwidth" to describe the effective bandwidth at which we can egress either the GPU or the node. It’s also the $\text{bisection bandwidth} * 2 / N$.
 
-<p markdown=1 class="takeaway">**Takeaway:** beyond the node level, the cost of an AllGather or AllReduce on B bytes is roughly $B / W_\text{node egress}$, which is $B / \text{400e9}$ on an H100 DGX SuperPod. The overall topology is a fat tree designed to give constant bandwidth between any two pairs of nodes.</p>
+<p markdown=1 class="takeaway">**Takeaway:** beyond the node level, the cost of an AllGather or ReduceScatter on B bytes is roughly $B / W_\text{node egress}$, which is $B / \text{400e9}$ on an H100 DGX SuperPod, while AllReduces cost twice as much unless SHARP is enabled. The overall topology is a fat tree designed to give constant bandwidth between any two pairs of nodes.</p>
 
 **Reductions when array is sharded over a separate axis:** Consider the cost of a reduction like
 

@@ -697,7 +697,7 @@ Pipeline parallelism splits layers across nodes with an extremely low communicat
 
 The overall communication cost of pipelining is tiny: with $N_\text{MB}$ microbatches and $N_\text{stages}$, we have $T_\text{comms per hop} = 2 \cdot B \cdot D / (W \cdot N_\text{MB})$ and $N_\text{MB} + N_\text{stages} - 2$ hops, so roughly
 
-$$T_\text{total PP comms} = \frac{2BD}{W \cdot N_\text{microbatches}} \cdot (N_\text{microbatches} + N_\text{stages} - 2)$$
+$$T_\text{total PP comms} = \frac{2BD}{W \cdot N_\text{MB}} \cdot (N_\text{MB} + N_\text{stages} - 2)$$
 
 $$T_\text{per-layer comms} \approx 1.5 \cdot \frac{2BD}{W \cdot N_\text{layers}}$$
 

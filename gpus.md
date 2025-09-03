@@ -773,7 +773,7 @@ GB200 SuperPods with 72-GPU nodes change this by adding more egress bandwidth ([
 {% details Click here for the answer. %}
 
 1. We need 2 bytes for the weights and 8 for the optimizer state, so at least 700GB. With 80GB of DRAM, we’ll need at least 9 GPUs at a minimum, or (rounding up) at least 2 8xH100 nodes. This would take forever to train and wouldn’t hold the gradient checkpoints, but it’s a lower bound.
-2. This will require a total of `6 * 70e9 * 15e12 = 6.3e24 bf16 FLOPs`. Each GPU can do `990e12` FLOPs, so at 40% MFU we can do 1.6e18 FLOPs/s. Thus the whole thing will take 3.9e6 seconds, or 45 days.
+2. This will require a total of `6 * 70e9 * 15e12 = 6.3e24 bf16 FLOPs`. Each GPU can do `990e12` FLOPs, so at 45% MFU we can do 1.8e18 FLOPs/s. Thus the whole thing will take 3.5e6 seconds, or 40 days.
 3. Within a node, we have 450GB/s of bandwidth, so the limit is roughly `F / 1995 = 28672 / 1995 = 14.372`. Since this doesn’t span 2 nodes, it realistically means we’d go up to 8-way model parallelism.
    1. This would then require us to do 512 way DP. Firstly, we need to see if we have enough memory. Since our model is only sharded 8-ways, this would mean `700GB / 8 = 87.5GB / GPU`, which won’t fit, so no!
    2. With ZeRO-3 and 8-way TP, we’ll be doing 512-way ZeRO-3. This won’t have any issue with memory because we’re sharding everything aggressively. We’ll have a per-GPU batch size of `4e6 / 4096 = 976`. This is quite low, even below our pure DP limit, and this is twice that limit because we have to move our weights. So no.

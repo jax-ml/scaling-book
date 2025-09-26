@@ -146,7 +146,7 @@ Lastly, note that we *cannot* have multiple named axes sharded along the *same* 
 
 {% details Click here for the answer. %}
 
-**Answer:** Our array **A** is sharded over X and Y and replicated over Z, so per device it has shape `int8[128 / (2 * 8), 2048] = int8[8, 2048]`, with size `8 * 2048 = 16,384` bytes. Because it's replicated over Z, while within a Z-plane it's fully sharded over X and Y, there's one copy of it per Z-plane, and 2 such planes, so the total size (across all devices) is `128 * 2048 * 2 = 512 KiB` total.
+**Answer:** Our array **A** is sharded over X and Y and replicated over Z, so per device it has shape `int8[128 / (2 * 8), 2048] = int8[8, 2048]`, with size `8 * 2048 = 16,384` bytes. "Because it's replicated over Z, while within a Z-plane it's fully sharded over X and Y, there are 2 complete copies of the original array (one per Z-plane). So the total size across all devices is: original array size × Z replicas = 128 * 2048 * 2 = 512 KiB total. Alternatively, we can verify this as: 32 devices × 16,384 bytes per device = 512 KiB total.
 
 {% enddetails %}
 

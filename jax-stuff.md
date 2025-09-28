@@ -85,11 +85,11 @@ JAX supports two schools of thought for multi-device programming:
 1. **Compiler, take the wheel!** Let the compiler automatically partition arrays and decide what communication to add to facilitate a given program. This lets you take a program that runs on a single device and automatically run it on thousands without changing anything.
 2. **Just let me write what I mean, damnit!** While compilers are nice, they sometimes do the wrong thing and add communication you don't intend. Sometimes we want to be explicit about exactly what communication you intend to run.
 
-Correspondingly, JAX provides two APIs for each of these schools: **jit** (`jax.jit`) and **shard\_map** (`jax.experimental.shard_map.shard_map`).
+Correspondingly, JAX provides two APIs for each of these schools: **jit** (`jax.jit`) and **shard\_map** (`jax.shard_map`).
 
 1. `jax.jit` lets you take any existing JAX function and call it with sharded inputs, leaving it up to JAX to partition the rest of the program automatically (either using XLA's [Shardy](https://openxla.org/shardy/getting_started_jax) compiler or [JAX's native "sharding in types"](https://docs.jax.dev/en/latest/notebooks/explicit-sharding.html) system). While it isn't perfect, it usually does a decent job at automatically scaling your program to any number of chips.
 
-2. `jax.experimental.shard_map.shard_map` is the more explicit counterpart. You get a device-local view of the program and have to write any communication you want explicitly. Have a sharded array and want the whole thing on each device? Add a `jax.lax.all_gather`. Want to sum an array across your devices? Add a `jax.lax.psum` (an AllReduce). Programming is harder but far less likely to do something you don't want.
+2. `jax.shard_map` is the more explicit counterpart. You get a device-local view of the program and have to write any communication you want explicitly. Have a sharded array and want the whole thing on each device? Add a `jax.lax.all_gather`. Want to sum an array across your devices? Add a `jax.lax.psum` (an AllReduce). Programming is harder but far less likely to do something you don't want.
 
 <h3 id="jax-jit-the-automatic-parallelism-solution">jax.jit: the automatic parallelism solution</h3>
 

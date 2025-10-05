@@ -298,7 +298,7 @@ $$\mathbf{A}[I, J] \cdot \mathbf{B}[J, K] \rightarrow \mathbf{C}[I, K]$$
 
 This way the actual multiplication can be done fully on each device.
 
-<p markdown=1 class="takeaway">**Takeaway:** When multiply matrices where one of the matrices is sharded along the contracting dimension, we general AllGather it first so the contraction is no longer sharded, then do a local matmul.</p>
+<p markdown=1 class="takeaway">**Takeaway:** When multiplying matrices where one of the matrices is sharded along the contracting dimension, we generally AllGather it first so the contraction is no longer sharded, then do a local matmul.</p>
 
 Note that when **B** is not also sharded along X, we could also do the local partial matmul and then sum (or *AllReduce*) the sharded partial sums, which can be faster in some cases. See Question 4 [below](#some-problems-to-work).
 

@@ -215,7 +215,7 @@ S[\blue{B}, T, \red{S}, \blue{K}, G] \cdot V[\blue{B}, \red{S}, \blue{K}, H]
 \end{array}
 $$
 
-**Note [causal masking]**: Most recent transformers use a causal mask as opposed to full bidirectional attention. In this case the useful FLOPs are reduced by a factor of 1/2. To achieve this reduction in practice we need to make use of an attention kernel, rather than a naive einsum.
+**Note [causal masking]**: Most recent transformers use a causal mask as opposed to full bidirectional attention. In this case the useful FLOPs of the dot product operations are reduced by a factor of 1/2. To achieve this reduction in practice we need to make use of an attention kernel, rather than a naive einsum.
 
 ### Other Operations
 

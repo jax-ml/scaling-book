@@ -245,7 +245,7 @@ $$\frac{8BD^2}{9.2 \times 10^{14}} > \frac{8D^2}{1.5 \times 10^{10}}$$
 
 or
 
-$$B > \frac{9.2 \times 10^{14}}{1.5 \times 10^{10}} \simeq 61,000$$
+$$B > \frac{9.2 \times 10^{14}}{1.5 \times 10^{10}} \simeq 61{,}000$$
 
 {% enddetails %}
 

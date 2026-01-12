@@ -30,6 +30,27 @@ Once you have run jekyll serve successfully, the book will be available at `http
 
 The Github Pages deployment is handled by a GitHub Action that runs automatically on new commits to the main branch.
 
+### Generating a Single Document
+
+To combine all chapters into a single markdown file with standardized formatting:
+
+```bash
+python bin/convert_to_single_md.py
+```
+
+This generates `scaling-book-combined.md` in the repository root. The script:
+- Strips Jekyll frontmatter
+- Converts `{% include figure.liquid %}` to standard markdown images
+- Converts internal page links to anchor links
+- Converts inline `$$` math to `$`
+- Strips unsupported LaTeX commands (with warnings)
+
+To convert the combined markdown to a Word document:
+
+```bash
+pandoc scaling-book-combined.md -o scaling-book.docx
+```
+
 ### Contributing and Contact
 
 If you see any issues or have questions, please leave a comment on the website itself (powered by Giscus) or in the GitHub discussion. Feel free to send a PR if you want to contribute. You can also email jaaustin [at] google [dot] com.

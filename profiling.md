@@ -50,7 +50,7 @@ authors:
 #   - please use this format rather than manually creating a markdown table of contents.
 toc:
   - name: "A Thousand-Foot View of the TPU Software Stack"
-  - name: "The TensorBoard Profiler: A Multi-Purpose TPU Profiler"
+  - name: "The JAX Profiler: A Multi-Purpose TPU Profiler"
   - subsections:
     - name: "Trace Viewer"
     - name: "How to read an XLA op"
@@ -234,7 +234,7 @@ Here we've zoomed into the FFW block. You'll see the up-projection Op is a fusio
 %fusion.1 = bf16[8,1024,4096]{2,1,0:T(8,128)(2,1)} fusion(bf16[8,1024,8192]{2,1,0:T(8,128)(2,1)} %fusion.31), kind=kCustom, calls=%all-reduce-scatter.1
 ```
 
-which is basically a little ReduceScatter (here's the GraphViewer);
+which is basically a little ReduceScatter (here's the Graph Viewer);
 
 {% include figure.liquid path="assets/img/reduce-scatter-xprof.png" class="img-fluid" %}
 
@@ -275,7 +275,7 @@ which tells us the per-shard shape is `bf16[8192] * bf16[4096, 8192] -> bf16[409
 
 {% enddetails %}
 
-**Question 2:** [The Transformer Colab from earlier](https://colab.research.google.com/drive/1_6krERgtolH7hbUIo7ewAMLlbA4fqEF8?usp=sharing) implements a simple mock Transformer. Follow the instructions in the Colab and get a benchmark of the naive Transformer with GSPMD partitioning. How long does each part take? How long should it take? What sharding is being used. Try fixing the sharding! *Hint: use `jax.lax.with_sharding_constraint` to constrain the behavior. With this fix, what's the best MXU you can get?*
+**Question 2:** [The Transformer Colab from earlier](https://colab.research.google.com/drive/1_6krERgtolH7hbUIo7ewAMLlbA4fqEF8?usp=sharing) implements a simple mock Transformer. Follow the instructions in the Colab and get a benchmark of the naive Transformer with GSPMD partitioning. How long does each part take? How long should it take? What sharding is being used? Try fixing the sharding! *Hint: use `jax.lax.with_sharding_constraint` to constrain the behavior. With this fix, what's the best MXU you can get?*
 
 For reference, the initial version gets roughly 184ms / layer and the optimized profile gets 67 ms / layer. Once you've done this, try staring at the profile and see if you can answer these questions purely from the profile:
 

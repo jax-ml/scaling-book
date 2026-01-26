@@ -173,17 +173,12 @@ d-appendix {
     grid-column: page !important;
   }
 
-  d-article p,
-  d-article ul,
-  d-article ol,
-  d-article blockquote,
-  d-article pre,
-  d-article table,
-  d-article details,
-  d-article figure,
-  d-article img,
-  d-article .l-body,
-  d-article .l-text {
+  d-article > * {
+    grid-column: page !important;
+  }
+
+  d-appendix > *,
+  d-footnote-list > * {
     grid-column: page !important;
   }
 }

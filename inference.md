@@ -273,7 +273,7 @@ What's using memory during inference? Well, obviously, our parameters. Counting 
 
 Adding these parameters up, we get 8.5e9 + 4.2e9 + 0.3e9 = **13e9 total parameters**, just as expected. As we saw in the previous sections, during training we might store our parameters in bfloat16 with an optimizer state in float32. That may use around 100GB of memory. That pales in comparison to our gradient checkpoints, which can use several TBs.
 
-**How is inference different?** During inference, we store one copy of our parameters, let's say in bfloat16. That uses 26GB — and in practice we can often do much better than this with quantization. There's no optimizer state or gradients to keep track of. Because we don't checkpoint (keep activations around for the backwards pass), our activation footprint is negligible for both prefill<d-footnote>Particularly thanks to Flash Attention, which avoids materializing our attention matrix</d-footnote> and generate. If we prefill 8k tokens, a single activation only uses around `8,192 x 5,120 x 2 bytes = 80MB` of memory. Longer prefills can be broken down into many smaller forward passes, so it's not a problem for longer contexts either. Generation use even fewer tokens than that, so activations are negligible.
+**How is inference different?** During inference, we store one copy of our parameters, let's say in bfloat16. That uses 26GB — and in practice we can often do much better than this with quantization. There's no optimizer state or gradients to keep track of. Because we don't checkpoint (keep activations around for the backwards pass), our activation footprint is negligible for both prefill<d-footnote>Particularly thanks to Flash Attention, which avoids materializing our attention matrix</d-footnote> and generate. If we prefill 8k tokens, a single activation only uses around `8,192 x 5,120 x 2 bytes = 80MB` of memory. Longer prefills can be broken down into many smaller forward passes, so it's not a problem for longer contexts either. Generation uses even fewer tokens than that, so activations are negligible.
 
 **The main difference is the KV cache**. These are the keys and value projections for all past tokens, bounded in size only by the maximum allowed sequence length. The total size for $$T$$ tokens is
 
@@ -459,7 +459,7 @@ One downside is that the KV cache now needs to be shifted across the network. Th
 
 Problem (2) above motivates the concept of **continuous batching**. We optimize and compile:
 
-* A number of prefill functions with variable context lengths and inserts it into some KV buffer, some maximum batch size and context length/number of pages.
+* A prefill function that handles variable context lengths and inserts results into a KV buffer with some maximum batch size and context length/number of pages.
 * A generate function which takes in the KV cache, and performs the generation step for all currently active requests.
 
 We then combine these functions with an orchestrator which queues the incoming requests, calls prefill and generate depending on the available generate slots, handles history caching (see next section) and streams the tokens out.
@@ -609,7 +609,7 @@ For a general $F$, we claim this condition is
 
 $$N > 32 \cdot \left(\frac{F}{D}\right) \cdot \left(\frac{3}{4}\right)^2$$
 
-So that tells us if we have more than 81 chips, we're better off using this new scheme. Now this is a slightly weird result because we've historically found ourselves ICI bound at around ~20 way tensor parallelism. But here, even if we're communication-bound, our total communication continues to decrease with the number of total chips! What this tells us is that we can continuous to increase our chips, increase our batch size, do more parameter scaling, and see reduced latency.
+So that tells us if we have more than 81 chips, we're better off using this new scheme. Now this is a slightly weird result because we've historically found ourselves ICI bound at around ~20 way tensor parallelism. But here, even if we're communication-bound, our total communication continues to decrease with the number of total chips! What this tells us is that we can continue to increase our chips, increase our batch size, do more parameter scaling, and see reduced latency.
 
 {% enddetails %}
 
@@ -633,7 +633,7 @@ So at least in this model, we do in fact see throughput increase until about BS2
 
 ### Appendix B: 2D Weight Stationary sharding
 
-As the topology grows, if we have access to higher dimensional meshes (like that of TPUs) it is possible to refine this further with "**2D Weight Sharding”**. By introducing a second sharding axis. We call this "**2D Weight Stationary**”, and was described in more detail in the [Efficiently Scaling Transformer Inference paper](https://arxiv.org/abs/2211.05102).
+As the topology grows, if we have access to higher dimensional meshes (like that of TPUs) it is possible to refine this further with "**2D Weight Sharding"** by introducing a second sharding axis. We call this "**2D Weight Stationary**”, and was described in more detail in the [Efficiently Scaling Transformer Inference paper](https://arxiv.org/abs/2211.05102).
 
 Because we're only sharding the hidden $$F$$ dimension in Megatron, it can become significantly smaller than $$E$$ (the $$d_\text{model}$$ dimension) once the number of chips grows large with 1D sharding. This means at larger batch sizes, it can be more economical to perform a portion of the collectives over the hidden dimension after the first layer of the MLP is applied.
 
@@ -644,11 +644,11 @@ This figure shows:
 1. 1D weight-stationary sharding, a.k.a. Pure Megatron sharding, where activations are fully replicated after AllGather, and weights are fully sharded over the hidden F dimension.
 2. 2D weight stationary sharding, where weights are sharded over both the hidden F and reduction E dimension, and activations are sharded over the E dimension. We perform an AllGather on the (yz) axis before the first layer, then ReduceScatter on the (x) axis.
 
-For the attention layer, Megatron style sharding is also relatively simple for smaller numbers of chips. However, Megatron happens over the $$n_\text{heads}$$ dimension, which puts a limit on the amount of sharding that is possible. Modifying the 2D sharding with for (instead of sharding the hidden, we shard the $$n_\text{heads}$$ dimension), we gain the ability to scale further.
+For the attention layer, Megatron style sharding is also relatively simple for smaller numbers of chips. However, Megatron happens over the $$n_\text{heads}$$ dimension, which puts a limit on the amount of sharding that is possible. Modifying the 2D sharding for attention (instead of sharding the hidden dimension, we shard the $$n_\text{heads}$$ dimension), we gain the ability to scale further.
 
 ### Appendix C: Latency bound communications
 
-As a recap, in [Section 3](../sharding) we derived the amount of time it takes to perform an AllGather into a tensor of size B on each TPU, over X chips on a 1D ring links of full duplex bandwidth of WICI and latency Tmin.
+As a recap, in [Section 3](../sharding) we derived the amount of time it takes to perform an AllGather into a tensor of size B on each TPU, over X chips on a 1D ring with links of full-duplex bandwidth of WICI and latency Tmin.
 
 $$T_{total} = \max\left(\frac{T_{min} \cdot |X|}{2}, \frac{B}{W_{ICI}}\right)$$
 

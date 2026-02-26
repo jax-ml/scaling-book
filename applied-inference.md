@@ -312,8 +312,6 @@ sequence_length = 8192  # can vary this
 hbm_bandwidth = 8.20E+11  # v5e
 flops = 1.97E+14  # v5e
 
-param_size = bytes_per_param * param_count
-
 def kv_cache_size(bs):
     return 2 * bs * 128 * 8 * 80
 
@@ -328,7 +326,7 @@ def get_max_batch_size(max_num_chips: int = 16):
   max_idx = np.where(num_chips <= max_num_chips)[0][-1]
   return max_idx
 
-max_idx = get_max_batch_size(num_chips, sequence_length, param_size)  # get the largest batch size that can fit
+max_idx = get_max_batch_size(num_chips)  # get the largest batch size that can fit
 batch_sizes = np.arange(1, 512, 1)[:max_idx]
 kv_sizes = kv_cache_size(sequence_length * batch_sizes)
 
@@ -337,7 +335,7 @@ kv_comms_time = kv_sizes / (num_chips * hbm_bandwidth)
 param_comms_time = param_size / (num_chips * hbm_bandwidth)
 param_comms_time = np.asarray([param_comms_time] * batch_sizes.shape[0])
 
-flops_time = 2 * param_count * batch_sizes / (num_chips * flops)  # roughly true in a 2ND sense
+flops_time = 2 * param_size * batch_sizes / (num_chips * flops)  # roughly true in a 2ND sense
 
 mlp_time = np.maximum(flops_time, param_comms_time)
 attn_time = kv_comms_time  # always bandwidth-bound for generate

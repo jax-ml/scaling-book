@@ -306,7 +306,9 @@ Here's the code for computing these rooflines:
 import numpy as np
 
 num_chips = 16  # we fix 16 as the amount of total model parallelism we do
-param_size = 70e9  # int8 means 1 byte per param
+bytes_per_param = 1  # int8 means 1 byte per param
+param_count = 70e9
+param_size = bytes_per_param * param_count
 sequence_length = 8192  # can vary this
 
 hbm_bandwidth = 8.20E+11  # v5e
@@ -318,15 +320,22 @@ def kv_cache_size(bs):
 def min_topology(bytes):
     return 2 ** np.ceil(np.log2(bytes / 16e9))
 
-def get_max_batch_size(max_num_chips: int = 16):
-  # for num_chips in topo_sizes:
+def get_max_batch_size(
+    num_chips: int,
+    sequence_length: int,
+    param_size: float,
+) -> int:
   batch_sizes = np.arange(1, 1024, 4)
   kv_sizes = kv_cache_size(sequence_length * batch_sizes)
-  num_chips = min_topology(kv_sizes + param_size)
-  max_idx = np.where(num_chips <= max_num_chips)[0][-1]
+  required_chips = min_topology(kv_sizes + param_size)
+  max_idx = np.where(required_chips <= num_chips)[0][-1]
   return max_idx
 
-max_idx = get_max_batch_size(num_chips)  # get the largest batch size that can fit
+max_idx = get_max_batch_size(
+    num_chips=num_chips,
+    sequence_length=sequence_length,
+    param_size=param_size,
+)  # get the largest batch size that can fit
 batch_sizes = np.arange(1, 512, 1)[:max_idx]
 kv_sizes = kv_cache_size(sequence_length * batch_sizes)
 

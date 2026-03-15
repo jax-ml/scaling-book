@@ -161,6 +161,8 @@ Here's a basic diagram of the Transformer decoder architecture:
 
 **Note 2 [MHA attention]**: With self-attention, T and S are the same but for cross-attention they may be different. With vanilla Multi-Head Attention (MHA), N and K are the same while for [Multi-Query Attention](https://arxiv.org/abs/1911.02150) (MQA)<d-cite key="mqa"></d-cite> K=1 and for [Grouped MQA](https://arxiv.org/abs/2305.13245) (GMQA)<d-cite key="gmqa"></d-cite> K merely has to divide N.
 
+**Note 3 [pre-norm vs. post-norm]:** The above diagram shows what is known as a "post-norm" Transformer in which the layernorm occurs after the residual connection, i.e. `norm(x + attn(x))`. This matches the original Transformer paper, but most modern Transformers today use a "pre-norm" architecture in which the norm occurs before the residual connection, usually as `x + attn(norm(x))`. Models like LLaMA-3 use this today.
+
 ## Global FLOPs and Params Calculation
 
 For the below we're going to compute per-layer FLOPs to avoid having to stick factors of **L** everywhere.

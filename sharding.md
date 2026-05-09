@@ -2,7 +2,7 @@
 layout: distill
 title: "Sharded Matrices and How to Multiply Them"
 # permalink: /main/
-description: "When we train large ML models, we have to split (or "shard") their parameters or inputs across many accelerators. Since LLMs are mostly made up of matrix multiplications, understanding this boils down to understanding how to multiply matrices when they're split across devices. We develop a simple theory of sharded matrix multiplication based on the cost of TPU communication primitives."
+description: "When we train large ML models, we have to split (or \"shard\") their parameters or inputs across many accelerators. Since LLMs are mostly made up of matrix multiplications, understanding this boils down to understanding how to multiply matrices when they're split across devices. We develop a simple theory of sharded matrix multiplication based on the cost of TPU communication primitives."
 date: 2025-02-04
 future: true
 htmlwidgets: true

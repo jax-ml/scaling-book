@@ -2,7 +2,7 @@
 layout: distill
 title: "All About Rooflines"
 # permalink: /main/
-description: "When we run algorithms on hardware, we're bounded by three things: how fast our computer can do math (OPs/second), the bandwidth available for moving data around (bytes/second), and the total memory available to store data (bytes). These "roofline" constraints let us upper and lower bound the time of a given computation."
+description: "When we run algorithms on hardware, we're bounded by three things: how fast our computer can do math (OPs/second), the bandwidth available for moving data around (bytes/second), and the total memory available to store data (bytes). These \"roofline\" constraints let us upper and lower bound the time of a given computation."
 date: 2025-02-04
 future: true
 htmlwidgets: true

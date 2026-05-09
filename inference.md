@@ -227,7 +227,7 @@ where the attention component (left) is never compute-bound, and thus doesn't ne
 
 {% details Click here for the answer. %}
 
-**Answer:** in int8, our parameters will use 30e9 bytes and with the given specs our KV caches will use `100e3 * 8192 = 819MB` each. We have 16 chips, each with `8.1e11` bytes/s of bandwidth and `1.97e14` bf16 FLOPs/s. From the above equations, since we have a small batch size, we expect our step time to be at least `(4 * 819e6 + 30e9) / (16 * 8.1e11) = 2.5 ms`. At 256 tokens, we'll be well into the compute-bound regime for our MLP blocks, so we have a step time of roughly `(256 * 819e6) / (16 * 8.1e11) + (2 * 256 * 30e9) / (16 * 1.97e14) = 21ms`.
+**Answer:** in int8, our parameters will use 30e9 bytes and with the given specs our KV caches will use `100e3 * 8192 = 819MB` each. We have 16 chips, each with `8.2e11` bytes/s of bandwidth and `1.97e14` bf16 FLOPs/s. From the above equations, since we have a small batch size, we expect our step time to be at least `(4 * 819e6 + 30e9) / (16 * 8.2e11) = 2.5 ms`. At 256 tokens, we'll be well into the compute-bound regime for our MLP blocks, so we have a step time of roughly `(256 * 819e6) / (16 * 8.2e11) + (2 * 256 * 30e9) / (16 * 1.97e14) = 21ms`.
 
 {% enddetails %}
 
@@ -468,7 +468,7 @@ We then combine these functions with an orchestrator which queues the incoming r
 
 ### Prefix caching
 
-Since prefill is expensive and compute-bound (giving us less headroom), one of the best ways to reduce its cost is to do less of it. Because LLMs are autoregressive, the queries ["I”, "like”, "dogs”] and ["I”, "like”, "cats”] produce KV caches that are identical in the first two tokens. What this means is that, in principle, if we compute the "I like dogs” cache first and then the "I like cats” cache, we only need to do 1 / 3 of the compute. We can save most of the work by reusing the cache. This is particularly powerful in a few specific cases:
+Since prefill is expensive and compute-bound (giving us less headroom), one of the best ways to reduce its cost is to do less of it. Because LLMs are autoregressive, the queries ["I", "like", "dogs"] and ["I", "like", "cats"] produce KV caches that are identical in the first two tokens. What this means is that, in principle, if we compute the "I like dogs" cache first and then the "I like cats" cache, we only need to do 1 / 3 of the compute. We can save most of the work by reusing the cache. This is particularly powerful in a few specific cases:
 
 1. **Chatbots**: most chatbot conversations involve a back-and-forth dialog that strictly appends to itself. This means if we can save the KV caches from each dialog turn, we can skip computation for all but the newest tokens.
 2. **Few-shot prompting**: if we have any kind of few-shot prompt, this can be saved and reused for free. System instructions often have this form as well.
@@ -483,7 +483,7 @@ The only reason this is hard to do is memory constraints. As we've seen, KV cach
 
 ### Let's look at an implementation: JetStream
 
-Google has open-sourced a library that implements this logic called [JetStream](https://github.com/google/JetStream). The server has a set of "prefill engines” and "generate engines”, usually on different TPU slices, which are orchestrated by a single controller. Prefill happens in the "[prefill thread](https://github.com/AI-Hypercomputer/JetStream/blob/c0f83127c16d7861cacc560303a28404c6cbb24c/jetstream/core/orchestrator.py#L499)”, while generation happens in the "[generate thread](https://github.com/AI-Hypercomputer/JetStream/blob/c0f83127c16d7861cacc560303a28404c6cbb24c/jetstream/core/orchestrator.py#L629)”. We also have a "[transfer thread](https://github.com/AI-Hypercomputer/JetStream/blob/c0f83127c16d7861cacc560303a28404c6cbb24c/jetstream/core/orchestrator.py#L592)” that orchestrates copying the KV caches from the prefill to generate slices.
+Google has open-sourced a library that implements this logic called [JetStream](https://github.com/google/JetStream). The server has a set of "prefill engines" and "generate engines", usually on different TPU slices, which are orchestrated by a single controller. Prefill happens in the "[prefill thread](https://github.com/AI-Hypercomputer/JetStream/blob/c0f83127c16d7861cacc560303a28404c6cbb24c/jetstream/core/orchestrator.py#L499)", while generation happens in the "[generate thread](https://github.com/AI-Hypercomputer/JetStream/blob/c0f83127c16d7861cacc560303a28404c6cbb24c/jetstream/core/orchestrator.py#L629)". We also have a "[transfer thread](https://github.com/AI-Hypercomputer/JetStream/blob/c0f83127c16d7861cacc560303a28404c6cbb24c/jetstream/core/orchestrator.py#L592)" that orchestrates copying the KV caches from the prefill to generate slices.
 
 The Engine interface (implemented [here](https://github.com/google/JetStream/blob/445f1aa8e857d0a09d72618e365daf80723bdf4c/jetstream/engine/engine_api.py#L138)) is a generic interface that any LLM must provide. The key methods are:
 
@@ -535,7 +535,7 @@ Our KV caches have size $2 \cdot L \cdot K \cdot H$ per token in int8, or `2 * 6
 
 {% details Click here for the answer. %}
 
-We have a total of 18.4B parameters, or 18.4e9 bytes in int8. We have 8.1e11 HBM bandwidth per chip, so it will take roughly `18e9 / (8.1e11 * 16) = 1.3ms` assuming we can fully use our HBM bandwidth.
+We have a total of 18.4B parameters, or 18.4e9 bytes in int8. We have 8.2e11 HBM bandwidth per chip, so it will take roughly `18e9 / (8.2e11 * 16) = 1.4ms` assuming we can fully use our HBM bandwidth.
 
 {% enddetails %}
 
@@ -566,7 +566,7 @@ For this sharding, what is the rough per-step latency for generation?
 
 {% enddetails %}
 
-**Question 6:** With MoEs, we can do "expert sharding”, where we split our experts across one axis of our mesh. In our standard notation, our first FFW weight has shape `[E, D, F]` and we shard it as [E<sub>Z</sub>, D<sub>X</sub>, F<sub>Y</sub>] where `X` is only used during training as our FSDP dimension. Let's say we want to do inference on a TPU v5e:
+**Question 6:** With MoEs, we can do "expert sharding", where we split our experts across one axis of our mesh. In our standard notation, our first FFW weight has shape `[E, D, F]` and we shard it as [E<sub>Z</sub>, D<sub>X</sub>, F<sub>Y</sub>] where `X` is only used during training as our FSDP dimension. Let's say we want to do inference on a TPU v5e:
 
 1. What's the HBM weight loading time for the above model on a TPU v5e 8x16 slice with Y=8, Z=16? How much free HBM is available per TPU?
 2. What is the smallest slice we could fit our model on?
@@ -633,7 +633,7 @@ So at least in this model, we do in fact see throughput increase until about BS2
 
 ### Appendix B: 2D Weight Stationary sharding
 
-As the topology grows, if we have access to higher dimensional meshes (like that of TPUs) it is possible to refine this further with "**2D Weight Sharding"** by introducing a second sharding axis. We call this "**2D Weight Stationary**”, and was described in more detail in the [Efficiently Scaling Transformer Inference paper](https://arxiv.org/abs/2211.05102).
+As the topology grows, if we have access to higher dimensional meshes (like that of TPUs) it is possible to refine this further with "**2D Weight Sharding"** by introducing a second sharding axis. We call this "**2D Weight Stationary**", and was described in more detail in the [Efficiently Scaling Transformer Inference paper](https://arxiv.org/abs/2211.05102).
 
 Because we're only sharding the hidden $$F$$ dimension in Megatron, it can become significantly smaller than $$E$$ (the $$d_\text{model}$$ dimension) once the number of chips grows large with 1D sharding. This means at larger batch sizes, it can be more economical to perform a portion of the collectives over the hidden dimension after the first layer of the MLP is applied.
 

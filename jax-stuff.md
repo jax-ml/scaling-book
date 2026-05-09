@@ -54,7 +54,7 @@ toc:
   - name: "How Does Parallelism Work in JAX?"
   - subsections:
     - name: "Auto sharding mode"
-    - name: “Explicit sharding mode”
+    - name: "Explicit sharding mode"
     - name: "Manual sharding mode via shard_map"
   - name: "Worked Problems"
 
@@ -166,7 +166,7 @@ This makes up about 60% of JAX parallel programming in the automatic partitionin
 
 <h3 id="explicit-sharding-mode">Explicit sharding mode</h3>
 
-Explicit sharding (or “sharding in types”) looks a lot like automatic sharding, but sharding propagation happens at the JAX level! Each JAX operation has a sharding rule that takes the shardings of the op's arguments and produces a sharding for the op's result. You can see the resulting sharding using `jax.typeof`:
+Explicit sharding (or "sharding in types") looks a lot like automatic sharding, but sharding propagation happens at the JAX level! Each JAX operation has a sharding rule that takes the shardings of the op's arguments and produces a sharding for the op's result. You can see the resulting sharding using `jax.typeof`:
 
 ```py
 import jax

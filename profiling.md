@@ -2,7 +2,7 @@
 layout: distill
 title: "How to Profile TPU Programs"
 # permalink: /main/
-description: "So far this series has been entirely theoretical: back-of-the-envelope calculations based on hardware rooflines. That understanding gets you far but a lot of optimization comes down to practical details: how the XLA compiler works and how to use profiling tools like the JAX/Tensorboard Profiler to figure out what to do when it fails. We discuss this here."
+description: "So far this series has been entirely theoretical: back-of-the-envelope calculations based on hardware rooflines. That understanding gets you far but a lot of optimization comes down to practical details: how the XLA compiler works and how to use profiling tools like the JAX/TensorBoard Profiler to figure out what to do when it fails. We discuss this here."
 date: 2025-02-04
 future: true
 htmlwidgets: true
@@ -81,7 +81,7 @@ _styles: >
 
 ## A Thousand-Foot View of the TPU Software Stack
 
-Google exposes a bunch of APIs for programming TPUs, from high level JAX code to low level Pallas or HLO. Most programmers write JAX code exclusively, which lets you write abstract NumPy-style linear algebra programs that are compiled automatically to run efficiently on TPUs.
+Google exposes a bunch of APIs for programming TPUs, from high-level JAX code to low-level Pallas or HLO. Most programmers write JAX code exclusively, which lets you write abstract NumPy-style linear algebra programs that are compiled automatically to run efficiently on TPUs.
 
 Here's a simple example, a JAX program that multiplies two matrices together:
 
@@ -95,7 +95,7 @@ def multiply(x, y):
 y = jax.jit(multiply)(jnp.ones((128, 256)), jnp.ones((256, 16), dtype=jnp.bfloat16))
 ```
 
-By calling `jax.jit`, we tell JAX to trace this function and emit a lower-level IR called [StableHLO](https://openxla.org/stablehlo), a platform-agnostic IR for ML computation, which is in turn lowered to HLO by the XLA compiler. The compiler runs many passes to determine fusions, layouts, and other factors that result in the HLO that is observable in a JAX profile. This HLO represents all the core linear algebra operations in the JAX code (matmuls, pointwise ops, convolutions, etc) in an LLVM-style graph view. For instance, here is an abridged version of the above program as HLO<d-footnote>To get this HLO, you can run `jax.jit(f).lower(*args, **kwargs).compile().as_text()`.</d-footnote>:
+By calling `jax.jit`, we tell JAX to trace this function and emit a lower-level IR called [StableHLO](https://openxla.org/stablehlo), a platform-agnostic IR for ML computation, which is in turn lowered to HLO by the XLA compiler. The compiler runs many passes to determine fusions, layouts, and other factors that result in the HLO that is observable in a JAX profile. This HLO represents all the core linear algebra operations in the JAX code (matmuls, pointwise ops, convolutions, etc.) in an LLVM-style graph view. For instance, here is an abridged version of the above program as HLO<d-footnote>To get this HLO, you can run `jax.jit(f).lower(*args, **kwargs).compile().as_text()`.</d-footnote>:
 
 ```c
 ENTRY %main.5 (Arg_0.1: f32[128,256], Arg_1.2: bf16[256,16]) -> f32[16,128] {
@@ -122,7 +122,7 @@ When a program is running slower than we'd like, we primarily work with the JAX 
 
 JAX provides a multi-purpose TPU profiler with a bunch of useful tools for understanding what's happening on the TPU when a program is run. You can use the `jax.profiler` module to trace a program as it's running and record everything from the duration of each subcomponent, the HLO of each program, memory usage, and more. For example, this code will dump a trace to a file in `/tmp/tensorboard` that can be viewed in TensorBoard ([here](https://docs.jax.dev/en/latest/profiling.html#tensorboard-profiling) is a step-by-step guide).
 
-```python
+```py
 import jax
 with jax.profiler.trace("/tmp/tensorboard"):
   key = jax.random.key(0)
@@ -172,7 +172,7 @@ The Trace Viewer shows a chronological timeline of all the actions on each TPU c
 
 HLO isn't actually very hard to read, and it's very helpful for understanding what a given part of the trace above corresponds to. Here's an example op called fusion.3.
 
-```py
+```c
 %fusion.3 = bf16[32,32,4096]{2,1,0:T(8,128)(2,1)S(1)} fusion(bf16[32,32,8192]{2,1,0:T(8,128)(2,1)S(1)} %fusion.32), kind=kCustom, calls=%all-reduce-scatter.3
 ```
 
@@ -180,8 +180,8 @@ Let's break this down into its pieces.
 
 * **Op Name**: fusion.3
   * A dot or fusion op is a set of operations containing at most 1 matrix multiplication and possibly a bunch of related pointwise VPU-ops.
-* **Shape/layout**: `bf16[32,32,4096]`
-  * This is the output shape of the op. We can see the dtype is bf16 (2 bytes per parameter) and `[32,32,4096]` is the shape.
+* **Shape**: `bf16[32,32,4096]`
+  * This is the output shape of the op. We can see the dtype is bf16 (2 bytes per element) and `[32,32,4096]` is the shape.
 * **Layout:** `{2,1,0:T(8,128)(2,1)}`
   * `{2,1,0:T(8,128)(2,1)}` tells us the order of the axes in memory (column major, row major, etc.) and the array padding. More below.
 * **Memory location:** S(1)
@@ -198,7 +198,7 @@ which again tells us that this Op returns a float32 array of shape `[3, 5]` with
 {% include figure.liquid path="assets/img/tiling.png" class="img-fluid" %}
 
 Within `{1,0:T(2,2)}`, the `1,0` part tells us the ordering of array dimensions in physical memory, from most minor to most major. You can read this part from right to left and pick out the corresponding dimensions in `f32[3,5]` to figure out the physical layout of the array. In this example, the physical layout is `[3,5]`, identical to the logical shape.
-After that, `T(2,2)` tells us that the array is tiled in chunks of `(2, 2)` where within each chunk, the array has rows first (**row-major**), then columns, i.e. `(0, 0)` is followed by `(0, 1)`, then `(1, 0)` and `(1,1)`. Because of the `T(2, 2)` tiling, the array is padded to `[4, 6]`, expanding its memory usage by about 1.6x. For the big bf16 array given above, `bf16[32,32,8192]{2,1,0:T(8,128)(2,1)S(1)}`, we do `T(8,128)(2,1)` which tells us the array has two levels of tiling, an outer `(8, 128)` tiling and an inner `(2, 1)` tiling within that unit (used for bf16 so our loads are always multiples of 4 bytes). For example, here's `bf16[4,8]{1,0:T(2,4)(2,1)}` (colors are (2,4) tiles, red boxes are (2,1) tiles):
+After that, `T(2,2)` tells us that the array is tiled in chunks of `(2, 2)` where within each chunk, the array has rows first (**row-major**), then columns, i.e. `(0, 0)` is followed by `(0, 1)`, then `(1, 0)` and `(1, 1)`. Because of the `T(2, 2)` tiling, the array is padded to `[4, 6]`, expanding its memory usage by about 1.6x. For the big bf16 array given above, `bf16[32,32,8192]{2,1,0:T(8,128)(2,1)S(1)}`, we do `T(8,128)(2,1)` which tells us the array has two levels of tiling, an outer `(8, 128)` tiling and an inner `(2, 1)` tiling within that unit (used for bf16 so our loads are always multiples of 4 bytes). For example, here's `bf16[4,8]{1,0:T(2,4)(2,1)}` (colors are (2,4) tiles, red boxes are (2,1) tiles):
 
 {% include figure.liquid path="assets/img/tiling2.png" class="img-fluid img-small" %}
 
@@ -226,11 +226,11 @@ Here we've zoomed into the FFW block. You'll see the up-projection Op is a fusio
 
 **X:** `bf16[32, 1024, 8192]` \* **W<sub>in</sub>**: `bf16[8192, 32768]` -> **Tmp**: `bf16[32, 1024, 32768]`
 
-**How long do we expect this to take?** First of all, our batch size per data parallel shard is `8 * 1024 = 8192`, so we should be solidly compute-bound. This is on 8 TPUv2 cores (freely available on Google Colab), so we expect it to take about `2 * 32 * 1024 * 8192 * 32768 / (23e12 * 8) = 95.6ms` which is pretty much exactly how long it takes (96ms). That's great! That means we're getting fantastic FLOPs utilization!
+**How long do we expect this to take?** First of all, our batch size per data parallel shard is `8 * 1024 = 8192`, so we should be solidly compute-bound. This is on 8 TPU v2 cores (freely available on Google Colab), so we expect it to take about `2 * 32 * 1024 * 8192 * 32768 / (23e12 * 8) = 95.6ms` which is pretty much exactly how long it takes (96ms). That's great! That means we're getting fantastic FLOPs utilization!
 
 **What about communication?** You'll notice the little fusion hidden at the end of the second matmul. If we click on it, you'll see
 
-```py
+```c
 %fusion.1 = bf16[8,1024,4096]{2,1,0:T(8,128)(2,1)} fusion(bf16[8,1024,8192]{2,1,0:T(8,128)(2,1)} %fusion.31), kind=kCustom, calls=%all-reduce-scatter.1
 ```
 
@@ -238,7 +238,7 @@ which is basically a little ReduceScatter (here's the Graph Viewer);
 
 {% include figure.liquid path="assets/img/reduce-scatter-xprof.png" class="img-fluid" %}
 
-How long do we expect this to take? Well, we're doing a ReduceScatter on a TPUv2 4x2, which should require only one hop on 1.2e11 bidirectional bandwidth. The array has size `2*32*1024*8192` with the batch axis sharded 4 ways, so each shard is `2*8*1024*8192=128MB`. So this should take roughly 1.1ms. **How long does it actually take?** 1.13ms reported in the profile. So we're really close to the roofline!
+How long do we expect this to take? Well, we're doing a ReduceScatter on a TPU v2 4x2, which should require only one hop on 1.2e11 bidirectional bandwidth. The array has size `2*32*1024*8192` with the batch axis sharded 4 ways, so each shard is `2*8*1024*8192=128MB`. So this should take roughly 1.1ms. **How long does it actually take?** 1.13ms reported in the profile. So we're really close to the roofline!
 
 **Let's look at attention too!** Here's a profile of the attention component:
 
@@ -248,7 +248,7 @@ I've clicked on the Q projection op, which uses a matrix $$W_Q$$ of shape [d<sub
 
 ### Memory Profile
 
-The Memory Profile makes it easy to see the program memory as a function of time. This is helpful for debugging OOMs. You can see here about 7.5GB allocated to model parameters and about 10GB free. So we can fit a lot more into memory.
+The Memory Profile makes it easy to see the program memory as a function of time. This is helpful for debugging OOMs. You can see here about 7.5GB allocated to model parameters and about 8.5GB free. So we can fit a lot more into memory.
 
 {% include figure.liquid path="assets/img/memory-viewer.png" class="img-fluid" %}
 
@@ -271,19 +271,19 @@ You can see a reduce, two big fusions, and an all-reduce. The first big fusion i
 
 ```%fusion.1 = bf16[4096]{0:T(1024)(128)(2,1)} fusion(bf16[4096,8192]{1,0:T(8,128)(2,1)} %param.1, bf16[8192]{0:T(1024)(128)(2,1)} %reduce.6), kind=kLoop, calls=%fused_computation.1```
 
-which tells us the per-shard shape is `bf16[8192] * bf16[4096, 8192] -> bf16[4096]` (over the 8192 dimension). By observing the final AllReduce with `replica_groups=\{\{0,16,32,48,64,80,96,112\}, ...\}`, we can tell we're doing 8-way model parallelism, so the true shapes are `[8, 8192] * bf16[32768, 8192] -> bf16[8, 32768]`.
+which tells us the per-shard shape is `bf16[8192] * bf16[4096, 8192] -> bf16[4096]` (over the 8192 dimension). By observing the final AllReduce with {% raw %}`replica_groups={{0,16,32,48,64,80,96,112}, ...}`{% endraw %}, we can tell we're doing 8-way model parallelism, so the true shapes are `bf16[8, 8192] * bf16[32768, 8192] -> bf16[8, 32768]`.
 
 {% enddetails %}
 
 **Question 2:** [The Transformer Colab from earlier](https://colab.research.google.com/drive/1_6krERgtolH7hbUIo7ewAMLlbA4fqEF8?usp=sharing) implements a simple mock Transformer. Follow the instructions in the Colab and get a benchmark of the naive Transformer with GSPMD partitioning. How long does each part take? How long should it take? What sharding is being used? Try fixing the sharding! *Hint: use `jax.lax.with_sharding_constraint` to constrain the behavior. With this fix, what's the best MXU you can get?*
 
-For reference, the initial version gets roughly 184ms / layer and the optimized profile gets 67 ms / layer. Once you've done this, try staring at the profile and see if you can answer these questions purely from the profile:
+For reference, the initial version gets roughly 184ms / layer and the optimized profile gets 67ms / layer. Once you've done this, try staring at the profile and see if you can answer these questions purely from the profile:
 
 - What sharding strategy is this?
 - What is the batch size, $$d_\text{model}$$, $$d_\text{ff}$$?
 - What fraction of time is spent on attention vs. the MLP block?
 - What fraction of time should be spent on each op at the roofline?
 
-**Note:** since this problem was written, the XLA compiler has gotten better. The initial version is now at roughly 90ms / layer and the optimized profile is only about 10ms / layer better (80 ms / layer). Still, it's worth playing with and seeing if you can do better.
+**Note:** since this problem was written, the XLA compiler has gotten better. The initial version is now at roughly 90ms / layer and the optimized profile is only about 10ms / layer better (80ms / layer). Still, it's worth playing with and seeing if you can do better.
 
 <h3 markdown=1 class="next-section">That's all for Part 9. For Part 10, with a deep dive into JAX parallelism, click [here](../jax-stuff).</h3>

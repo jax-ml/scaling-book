@@ -84,7 +84,7 @@ JAX supports three schools of thought for multi-device programming:
 
 1. **Compiler, take the wheel!** Let the XLA compiler automatically partition arrays and decide what communication to add to facilitate a given program. This lets you take a program that runs on a single device and automatically run it on thousands without changing anything.
 2. **JAX, take the wheel!** Automatic parallelism is great, but sometimes the compiler does something crazy. Explicit sharding lets you write single-device code like usual, but have JAX handle sharding propagation (not the compiler). This means JAX can ask you for clarification when it's unclear what you want.
-3. **Just let me write what I mean, damnit!** While compilers are nice, they sometimes do the wrong thing and add communication you don't intend. Sometimes we want to be explicit about exactly what communication we intend to run.
+3. **Just let me write what I mean, dammit!** While compilers are nice, they sometimes do the wrong thing and add communication you don't intend. Sometimes we want to be explicit about exactly what communication we intend to run.
 
 | Mode | View? | Explicit sharding? | Explicit Collectives? |
 |:---:|:---:|:---:|:---:|
@@ -128,7 +128,7 @@ out = jit_matmul(In, W)
 
 This will run automatically with any sharding and partition the computation across our devices. **But what's actually happening at the hardware level?**
 
-1. First we create In and W sharded across our devices<d-footnote>Notice how we did this.  This is one way to create an array with a particular sharding (i.e. by adding the device argument to the creation function). Another one is to create an array normally with `jnp.array(....)` and then do e.g. `jax.device_put(..., jax.P('x', 'y'))`.  Yet another is to write a function which creates the array you want, and jit-compile it with `out_shardings` being what you want.</d-footnote>. W is sharded 2-way along the contracting dimension, while In is sharded 4-way (along both the contracting and output dimensions). This corresponds to a sharding W[D<sub>Y</sub>, F] and In[B<sub>X</sub>, D<sub>Y</sub>], aka a kind of model and data parallelism.
+1. First we create In and W sharded across our devices<d-footnote>Notice how we did this. This is one way to create an array with a particular sharding (i.e. by adding the device argument to the creation function). Another one is to create an array normally with `jnp.array(....)` and then do e.g. `jax.device_put(..., jax.P('X', 'Y'))`. Yet another is to write a function which creates the array you want, and jit-compile it with `out_shardings` being what you want.</d-footnote>. W is sharded 2-way along the contracting dimension, while In is sharded 4-way along the output dimension and 2-way along the contracting dimension. This corresponds to a sharding W[D<sub>Y</sub>, F] and In[B<sub>X</sub>, D<sub>Y</sub>], aka a kind of model and data parallelism.
 2. If we were running this locally (i.e. on one device), `matmul_square` would simply square the input and perform a simple matmul. But because we specify the `out_shardings` as `P('X', None)`, the output will be sharded along the batch but replicated across the model dimension and will require an AllReduce to compute.
 
 Using our notation from previous sections, this will likely do something like
@@ -155,6 +155,7 @@ import jax
 import jax.numpy as jnp
 
 mesh = jax.make_mesh((4, 2), ('X', 'Y'))
+jax.set_mesh(mesh)
 
 def matmul(x, Win, Wout):
   hidden = jnp.einsum('bd,df->bf', x, Win)
@@ -181,19 +182,19 @@ mesh = jax.make_mesh(axis_shapes=(2, 2), axis_names=('X', 'Y'),
 # This tells JAX to use this mesh for all operations, so you can just specify the PartitionSpec P.
 jax.set_mesh(mesh)
 
-x = jax.device_put(np.arange(16).reshape(8, 2), jax.P('X', 'Y'))
+x = jax.device_put(np.arange(16, dtype=np.float32).reshape(8, 2), jax.P('X', 'Y'))
 
 @jax.jit
 def f(x):
-  print(jax.typeof(x))  # bfloat16[8@X,2@Y]
+  print(jax.typeof(x))  # float32[8@X,2@Y]
   out = x * 2
-  print(jax.typeof(out))  # bfloat16[8@X,2@Y]
+  print(jax.typeof(out))  # float32[8@X,2@Y]
   return out
 
 f(x)
 ```
 
-As you can see, JAX propagated the sharding from input (`x`) to output (`x`) which are inspectable at trace-time via `jax.typeof`. For most operations these rules are simple and obvious because there's only one reasonable choice (e.g. elementwise ops retain the same sharding). But for some operations it's ambiguous how to shard the result in which case JAX throws a trace-time error and we ask the programmer to provide an `out_sharding` argument explicitly (e.g. jnp.einsum, jnp.reshape, etc). Let's see another example where you have conflicts:
+As you can see, JAX propagated the sharding from input (`x`) to output (`out`) which are inspectable at trace-time via `jax.typeof`. For most operations these rules are simple and obvious because there's only one reasonable choice (e.g. elementwise ops retain the same sharding). But for some operations it's ambiguous how to shard the result, in which case JAX throws a trace-time error and asks the programmer to provide an `out_sharding` argument explicitly (e.g. jnp.einsum, jnp.reshape, etc). Let's see another example where you have conflicts:
 
 ```py
 # We create a matrix W and input activations In sharded across our devices.
@@ -209,13 +210,19 @@ def matmul_square(In, W):
 matmul_square(In, W)  # This will error
 ```
 
-This code errors with `Contracting dimensions are sharded and it is ambiguous how the output should be sharded. Please specify the output sharding via the `out_sharding` parameter. Got lhs_contracting_spec=('Y',) and rhs_contracting_spec=('Y',)`
+This code errors with:
+
+```
+Contracting dimensions are sharded and it is ambiguous how the output should be sharded.
+Please specify the output sharding via the `out_sharding` parameter.
+Got lhs_contracting_spec=('Y',) and rhs_contracting_spec=('Y',)
+```
 
 This is awesome because how the output of einsum should be sharded is ambiguous. The output sharding can be:
-* P('X', 'Y') which will induce a reduce-scatter or
-* P('X', None) which will induce an all-reduce
+* P('X', 'Y') which will induce a ReduceScatter or
+* P('X', None) which will induce an AllReduce
 
-Unlike Auto mode, explicit mode errors out when it detects ambiguous communication and requires the users to resolve it. So here you can do:
+Unlike Auto mode, explicit mode errors out when it detects ambiguous communication and requires the user to resolve it. So here you can do:
 
 ```py
 @jax.jit
@@ -228,7 +235,7 @@ print(jax.typeof(out))  # bfloat16[8@X,8192@Y]
 
 Auto mode and Explicit mode can be composed via `jax.sharding.auto_axes` and `jax.sharding.explicit_axes` APIs. This is a [great doc to read](https://docs.jax.dev/en/latest/notebooks/explicit-sharding.html) for more information.
 
-<h3 id="manual-sharding-mode-via-shard_map">shard_map: explicit parallelism control over a program</h3>
+<h3 id="manual-sharding-mode-via-shard_map">Manual sharding mode via shard_map</h3>
 
 While Shardy is the "compiler take the wheel" mode, jax [shard_map](https://jax.readthedocs.io/en/latest/jep/14273-shard-map.html) puts everything in your hands. You specify the sharding of the inputs, like in jax.jit, but then you write all communication explicitly. Whereas `jax.jit` leaves you with a global cross-device view of the program, `shard_map` gives you a local per-device view.
 
@@ -258,7 +265,7 @@ assert out.shape == (4,)
 
 **Why do this instead of jax.jit?** If we'd used `jax.jit`, `slice_and_average` would have seen a global view of the array (the full `[512,]` array). We'd have had to slice out this non-uniform slice and then perform an average which XLA would have had to interpret correctly. XLA might have added the wrong communication or gotten confused. Here we see the local view and write only the communication we need.
 
-**Example [Collective Matmul]:** To take a more realistic example, say we want to implement model parallelism where the activations are initially model sharded, i.e. A[B<sub>X</sub>, D<sub>Y</sub>] \* W[D, F<sub>Y</sub>] -> Out[B<sub>X</sub>, F<sub>Y</sub>]. Naively, we would do this by AllGathering A first followed by a local matrix multiplication:
+**Example [Collective Matmul]:** To take a more realistic example, say we want to implement model parallelism where the activations are initially model sharded, i.e. A[B<sub>X</sub>, D<sub>Y</sub>] \*<sub>D</sub> W[D, F<sub>Y</sub>] -> Out[B<sub>X</sub>, F<sub>Y</sub>]. Naively, we would do this by AllGathering A first followed by a local matrix multiplication:
 
 1. A[B<sub>X</sub>, D] = **AllGather**<sub>Y</sub>(A[B<sub>X</sub>, D<sub>Y</sub>])
 2. Out[B<sub>X</sub>, F<sub>Y</sub>] = A[B<sub>X</sub>, D] *<sub>D</sub> W[D, F<sub>Y</sub>]
@@ -340,7 +347,7 @@ This is pretty neat! We can benchmark this and see that it's also a lot faster! 
 
 {% include figure.liquid path="assets/img/not-overlapped.png" class="img-fluid" %}
 
-And [here's](https://imgur.com/a/21iy0Sv) the version above that takes 244 us. You can see the profile doesn't have the AllGather. It's all useful work! Our FLOPs utilization is also a lot higher.
+And [here's](https://imgur.com/a/21iy0Sv) the version above that takes 244us. You can see the profile doesn't have the AllGather. It's all useful work! Our FLOPs utilization is also a lot higher.
 
 {% include figure.liquid path="assets/img/overlapped.png" class="img-fluid" %}
 
@@ -350,13 +357,13 @@ Now here are a couple of useful worked problems to try and implement using `jax.
 
 ## Worked Problems
 
-Here are some random JAX-related problems. I'll add some more later. For all of these, you'll need some number of TPUs in a Colab. You can use a public Colab with TPUv2-8. From now on, we'll assume you have N devices available.
+Here are some random JAX-related problems. I'll add some more later. For all of these, you'll need some number of TPUs in a Colab. You can use a public Colab with a TPU v2-8. From now on, we'll assume you have N devices available.
 
-**Problem 1:** Let **A** be an array of activations of shape float32[S<sub>X</sub>, D<sub>Y</sub>] with `X * Y = N`. Do the following:
+**Question 1:** Let **A** be an array of activations of shape float32[S<sub>X</sub>, D<sub>Y</sub>] with `X * Y = N`. Do the following:
 
 1. Write a function in JAX that computes the average within each `(X, Y)` shard, i.e. it returns an array of size [X, Y] where `arr[i, j]` is the average over shard `(i, j)`. Do this with both `jax.jit` and `shard_map`. Profile each and see how long they took. Was there any communication added? *Hint: there shouldn't be, but sometimes XLA adds it anyway.*
 
-2. Write a function in JAX that returns roll(x, shift, axis=0) - x for some shift **within each shard X**. I'm not enough of a masochist to make you do this in jax.jit, so just do this with `shard_map`.
+2. Write a function in JAX that returns `roll(x, shift, axis=0) - x` for some shift **within each shard along X**. I'm not enough of a masochist to make you do this in jax.jit, so just do this with `shard_map`.
 
 {% details Click here for the answer. %}
 
@@ -382,7 +389,7 @@ def average(x):
 
 average_jit = jax.jit(average, out_shardings=jax.NamedSharding(mesh, jax.P('X','Y')))
 
-x = jnp.arange(8 * 64 * 8, dtype=jnp.int32).reshape(8 * 64, 8)
+x = jnp.arange(8 * 64 * 8, dtype=jnp.float32).reshape(8 * 64, 8)
 x = jax.device_put(x, jax.NamedSharding(mesh, jax.P('X','Y')))
 
 y1 = average_shmap(x)
@@ -401,8 +408,6 @@ import jax.numpy as jnp
 
 import functools
 
-P = jax.sharding.PartitionSpec
-
 mesh = jax.make_mesh((4, 2), ('X','Y'))
 
 def shift_shmap(x, shift: int):
@@ -419,7 +424,7 @@ def shift_jit(x, shift: int):
   reshaped = x.reshape(X, x.shape[0] // X, -1)
   return jnp.roll(reshaped, shift, axis=1).reshape(x.shape[0], x.shape[1])
 
-x = jnp.arange(8 * 64 * 8, dtype=jnp.int32).reshape(8 * 64, 8)
+x = jnp.arange(8 * 64 * 8, dtype=jnp.float32).reshape(8 * 64, 8)
 x = jax.device_put(x, jax.NamedSharding(mesh, jax.P('X','Y')))
 
 y1 = shift_shmap(x, 5)
@@ -430,7 +435,7 @@ np.testing.assert_array_equal(y1, y2)
 
 {% enddetails %}
 
-**Problem 2:** Here we'll make a basic "mixture of experts" model together. Let **W**: float32[E<sub>X</sub>, D, F] be a set of E "expert" matrices. Let **A**: float32[S<sub>X</sub>, D] (our activations) and let **B**: int32[S<sub>X</sub>] be a set of "routing assignments" where B[i] is an integer in the range `[0, E)` telling us which matrix we want to process that activation. We want to write a function in JAX that returns `Out[i] = W[B[i]] @ A[i]`.
+**Question 2:** Here we'll make a basic "mixture of experts" model together. Let **W**: float32[E<sub>X</sub>, D, F] be a set of E "expert" matrices. Let **A**: float32[S<sub>X</sub>, D] (our activations) and let **B**: int32[S<sub>X</sub>] be a set of "routing assignments" where B[i] is an integer in the range `[0, E)` telling us which matrix we want to process that activation. We want to write a function in JAX that returns `Out[i] = A[i] @ W[B[i]]`.
 
 1. Let's start by ignoring sharding altogether. Make all of these tensors small enough so they fit in one device. Write a local implementation of this function. *Make sure you don't materialize an array of shape `[S, D, F]`! Hint: try sorting the tokens into a new buffer of shape `[E, S, D]` with some attention to masking (why do we need the second dimension to have size S?).*
 
@@ -438,11 +443,11 @@ np.testing.assert_array_equal(y1, y2)
 
 3. One problem you'll notice with the above is that it likely gathers the full set of activations **A** locally, i.e. AllGather<sub>X</sub>([S<sub>X</sub>, D]). Not only is this expensive communication-wise, it's also incredibly expensive memory-wise if we can't fit the full set of activations locally. Implement the above using `shard_map` and explicit communication.
 
-      1. For a first pass, it might be easiest to use a `jax.lax.all_gather` and reorder as in (a).
+      1. For a first pass, it might be easiest to use a `jax.lax.all_gather` and reorder as in step 1.
 
       2. For a second pass, try to avoid materializing any array of size `[E, S, D]`, i.e. try to perform the computation in a ragged fashion using a `jax.lax.all_to_all` inside a `jax.lax.while_loop`. This way, you can avoid materializing the full activations and wasting compute on padding. How much faster is this than your original implementation?
 
-4. Most MoEs route to multiple (k) experts and then average the result. Refactor the above to implement this. Let **B**: int32[S, k] in this case for the k experts to route to.
+4. Most MoEs route to multiple (k) experts and then average the result. Refactor the above to implement this. Let **B**: int32[S<sub>X</sub>, k] in this case for the k experts to route to.
 
 {% details Click here for the (partial) answer. %}
 
@@ -461,7 +466,7 @@ def moe_local(W: jnp.ndarray, A: jnp.ndarray, B: jnp.ndarray) -> jnp.ndarray:
         return output, None
 
     output = jnp.zeros((S, F))
-    output, _ = lax.scan(expert_forward, output, jnp.arange(E))
+    output, _ = jax.lax.scan(expert_forward, output, jnp.arange(E))
 
     return output
 ```
@@ -475,9 +480,10 @@ chunk_size = 128
 def matmul(W, x, B):
   i = 0
   x = # sort x according to assignments
-  while (chunk := x[i:i+chunk_size].any()):
+  while (chunk := x[i:i+chunk_size]).any():
      chunk = all_to_all(chunk)
      out = matmul_local(W, chunk)
+     i += chunk_size
   return concat(out)
 ```
 
@@ -485,7 +491,7 @@ The basic idea is to iterate over chunks of the array, sort them and do an all_t
 
 {% enddetails %}
 
-**Problem 3:** The collective matmul example above is actually super relevant for real LLMs. Let's tweak the example to do the full Transformer stack.
+**Question 3:** The collective matmul example above is actually super relevant for real LLMs. Let's tweak the example to do the full Transformer stack.
 
 1. As an exercise, let's start by implementing an AllReduce collective matmul, i.e. A[B<sub>X</sub>, D<sub>Y</sub>] \*<sub>D</sub> W[D<sub>Y</sub>, F] -> Out[B<sub>X</sub>, F]. Note that the output isn't replicated. The naive algorithm is discussed above, basically just a local matmul followed by an AllReduce. Try to make a comms overlapped "collective" version of this operation. *Hint: tile over the output dimension and feel free to use `jax.lax.psum` (aka AllReduce).* *Note: due to the way XLA handles this, it may not actually be faster than the baseline.*
 
@@ -493,6 +499,6 @@ The basic idea is to iterate over chunks of the array, sort them and do an all_t
 
 3. Put these two together into an end-to-end Transformer block that performs In[B<sub>X</sub>, D<sub>Y</sub>] \*<sub>D</sub> W<sub>in</sub>[D, F<sub>Y</sub>] \*<sub>F</sub> W<sub>out</sub>[F<sub>Y</sub>, D] -> Out[B<sub>X</sub>, D<sub>Y</sub>] with overlapped communication.<d-footnote>As before, we can't do $W_{in} \cdot W_{out}$ first because of a non-linearity we've omitted here.</d-footnote> How much faster is this than a `jax.jit` implementation?
 
-**Problem 4:** All of the collective matmuls implemented above are unidirectional: they only permute in one direction. Rewrite the collective AllReduce matmul and the collective ReduceScatter matmuls to use bidirectional communication. How much faster are these?
+**Question 4:** All of the collective matmuls implemented above are unidirectional: they only permute in one direction. Rewrite the collective AllReduce matmul and the collective ReduceScatter matmuls to use bidirectional communication. How much faster are these?
 
 ### That's all for Part 10. That's basically it! For final conclusions and further reading, click [here](../conclusion).

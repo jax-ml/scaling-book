@@ -257,7 +257,7 @@ plt.grid()
 
 Let's start by looking at the total FLOPs and comms.
 
-1. Total FLOPs: the FLOPs is basically the same, since we're doing $$B$$ independent $$[D] \times [D, F]$$ products, the same total work as a single $$[B, D] \times [D, F]$$ matmul (this is discussed more in section 4). So this is just $$2BDF$$.
+1. Total FLOPs: the FLOPs is basically the same, since we're doing $$B$$ independent $$[D] \times [D, F]$$ products, the same total work as a single $$[B, D] \times [D, F]$$ matmul (this is discussed more in Section 4). So this is just $$2BDF$$.
 2. Total comms: we have a lot more comms here: $$BD + BDF + BF$$.
 3. Therefore, our arithmetic intensity is now actually $$2BDF / (BD + BDF + BF)$$. Since $$BDF$$ dominates the denominator, this is roughly $$2$$. So instead of it depending on the batch size, this is essentially constant. This is bad because it means we'll basically always be comms bound no matter what.
 

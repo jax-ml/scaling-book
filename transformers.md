@@ -112,7 +112,7 @@ $$
 - A dot product of $$x \cdot y$$ requires $$P$$ _adds_ and _multiplies_, or $$2P$$ floating-point operations total.
 - A matrix-vector product $$Ax$$ does $$N$$ dot-products along the rows of $$A$$, for $$2NP$$ FLOPs.
 - A matrix-matrix product $$AB$$ does a matrix-vector product for each of the $$M$$ columns of $$B$$, for $$2NPM$$ FLOPs total.
-- In general, if we have two higher dimensional arrays $$C$$ and $$D$$, where some dimensions are <span style="color:red">CONTRACTING</span> and some are <span style="color:blue">BATCHING</span>.  (e.g. $$C[\blue{GH}IJ\red{KL}], D[\blue{GH}MN\red{KL}]$$) then the FLOPs cost of this contraction is two times the product of all of the $$C$$ and $$D$$ dimensions where the batch and contraction dimensions are only counted once, (e.g. $$2\blue{GH}IJMN\red{KL}$$). Note that a dimension is only batching if it occurs in both multiplicands. (Note also that the factor of 2 won't apply if there are no contracting dimensions and this is just an elementwise product.)<d-footnote><b>Contracting</b> dimensions are axes that are summed over during the operation (they appear in both inputs but not in the output), like the inner dimension in a matrix multiply. <b>Batching</b> dimensions are shared axes that appear in both inputs and are carried unchanged to the output; they index independent subproblems and aren't multiplied together in FLOP counts. In einsum terms: labels present on both inputs and the output are batching; labels present on both inputs but absent from the output are contracting.</d-footnote>
+- In general, if we have two higher dimensional arrays $$C$$ and $$D$$, where some dimensions are <span style="color:red">CONTRACTING</span> and some are <span style="color:blue">BATCHING</span> (e.g. $$C[\blue{GH}IJ\red{KL}], D[\blue{GH}MN\red{KL}]$$), then the FLOPs cost of this contraction is two times the product of all of the $$C$$ and $$D$$ dimensions where the batch and contraction dimensions are only counted once (e.g. $$2\blue{GH}IJMN\red{KL}$$). Note that a dimension is only batching if it occurs in both multiplicands. (Note also that the factor of 2 won't apply if there are no contracting dimensions and this is just an elementwise product.)<d-footnote><b>Contracting</b> dimensions are axes that are summed over during the operation (they appear in both inputs but not in the output), like the inner dimension in a matrix multiply. <b>Batching</b> dimensions are shared axes that appear in both inputs and are carried unchanged to the output; they index independent subproblems and aren't multiplied together in FLOP counts. In einsum terms: labels present on both inputs and the output are batching; labels present on both inputs but absent from the output are contracting.</d-footnote>
 
 $$
 \begin{array}{ccc}
@@ -129,7 +129,7 @@ AB         & 2NPM & NP + PM \\
 \end{array}
 $$
 
-Make note of the fact that for a matrix-matrix multiply, the *compute* scales cubically $$O(N^3)$$ while the data transfer only scales quadratically $$O(N^2)$$ \- this means that as we scale up our matmul size, it becomes *easier* to hit the compute-saturated limit. This is extremely unusual, and explains in large part why we use architectures dominated by matrix multiplication \- they're amenable to being scaled!
+Make note of the fact that for a matrix-matrix multiply, the *compute* scales cubically $$O(N^3)$$ while the data transfer only scales quadratically $$O(N^2)$$ — this means that as we scale up our matmul size, it becomes *easier* to hit the compute-saturated limit. This is extremely unusual, and explains in large part why we use architectures dominated by matrix multiplication — they're amenable to being scaled!
 
 {% include figure.liquid path="assets/img/matmul-flops.gif" class="img-fluid" %}
 
@@ -145,7 +145,7 @@ which requires $2NPM$ FLOPs to compute (since it contracts over the $N$ dimensio
 
 $$\frac{\partial L}{\partial A} = \frac{\partial L}{\partial C}\frac{\partial C}{\partial A} = \left(\frac{\partial L}{\partial C}\right) B^T$$
 
-is again $2NPM$ FLOPs since **dL/dC** is a matrix of size $$[N, M]$$. While this quantity isn't the derivative w.r.t. a parameter, it's used to compute derivatives for previous layers of the network (e.g. just as dL/dC is used to compute dL/dB above).
+which is again $2NPM$ FLOPs since **dL/dC** is a matrix of size $$[N, M]$$. While this quantity isn't the derivative w.r.t. a parameter, it's used to compute derivatives for previous layers of the network (e.g. just as dL/dC is used to compute dL/dB above).
 
 Adding these up, we see that **during training, we have a total of 6NPM FLOPs**, compared to 2NPM during inference: 2NPM in the forward pass, 4NPM in the backward pass. Since PM is the number of parameters in the matrix, this is the simplest form of the famous $$6 * \text{num parameters} * \text{num tokens}$$ approximation of Transformer FLOPs during training: each token requires $$6 * \text{num parameters}$$ FLOPs. We'll show a more correct derivation below.
 
@@ -157,7 +157,7 @@ Here's a basic diagram of the Transformer decoder architecture:
 
 {% include figure.liquid path="assets/img/transformer-diagram.png" class="img-fluid" caption="<b>Figure:</b> this diagram shows one layer of a standard Transformer and flows from top-to-bottom. We use a single-letter convention to describe the shapes and layouts of arrays in a Transformer, again showing contracting dimensions in red, and batched dimensions in blue. In a given operation, the input shape is given on top-left and the parameter shape is given on the top-right, with the resulting shape below, e.g. BTD is the input shape for the gating einsum and DF is the weight shape." %}
 
-**Note [gating einsum]**: The diagram above uses a "[gating einsums](https://arxiv.org/abs/2002.05202)"<d-cite key="glu"></d-cite> where we split the up-projection matrix into two matrices ($W_\text{In1}$ and $W_\text{In2}$ above) whose outputs are elementwise multiplied as a kind of "gating function". Not all LLMs use this, so you will sometimes see a single $W_\text{In}$ matrix and a total MLP parameter count of 2DF instead of 3DF. Typically in this case, D and F will be scaled up to keep the parameter count the same as the 3 matrix case. With that said, some form of gating einsum is used by LLaMA, DeepSeek, and many other models.
+**Note [gating einsum]**: The diagram above uses a "[gating einsum](https://arxiv.org/abs/2002.05202)"<d-cite key="glu"></d-cite> where we split the up-projection matrix into two matrices ($W_\text{In1}$ and $W_\text{In2}$ above) whose outputs are elementwise multiplied as a kind of "gating function". Not all LLMs use this, so you will sometimes see a single $W_\text{In}$ matrix and a total MLP parameter count of 2DF instead of 3DF. Typically in this case, D and F will be scaled up to keep the parameter count the same as the 3 matrix case. With that said, some form of gating einsum is used by LLaMA, DeepSeek, and many other models.
 
 **Note 2 [MHA attention]**: With self-attention, T and S are the same but for cross-attention they may be different. With vanilla Multi-Head Attention (MHA), N and K are the same while for [Multi-Query Attention](https://arxiv.org/abs/1911.02150) (MQA)<d-cite key="mqa"></d-cite> K=1 and for [Grouped MQA](https://arxiv.org/abs/2305.13245) (GMQA)<d-cite key="gmqa"></d-cite> K merely has to divide N.
 
@@ -216,11 +216,11 @@ S[\blue{B}, T, \red{S}, \blue{K}, G] \cdot V[\blue{B}, \red{S}, \blue{K}, H]
 \end{array}
 $$
 
-**Note [causal masking]**: Most recent transformers use a causal mask as opposed to full bidirectional attention. In this case the useful FLOPs of the dot product operations are reduced by a factor of 1/2. To achieve this reduction in practice we need to make use of an attention kernel, rather than a naive einsum.
+**Note [causal masking]**: Most recent transformers use a causal mask as opposed to full bidirectional attention. In this case the useful FLOPs of the dot product operations are reduced by half. To achieve this reduction in practice we need to make use of an attention kernel, rather than a naive einsum.
 
 ### Other Operations
 
-There are several other operations happening in a Transformer.  Layernorms are comparatively cheap and can be ignored for first-order cost estimates. There is also the final enormous (though not per-layer) unembedding matrix multiply.
+There are several other operations happening in a Transformer. Layernorms are comparatively cheap and can be ignored for first-order cost estimates. There is also the final enormous (though not per-layer) unembedding matrix multiply.
 
 $$
 \begin{array}{ccc}
@@ -249,7 +249,7 @@ If we do account for dot-product attention above and assume $$F=4D$$, $$D=NH$$ (
 
 $$\small{\frac{\textrm{attention FLOPs}}{\textrm{matmul FLOPs}} = \frac{12BT^2NH}{18BTDF + 24BTDNH} = \frac{12BT^2D}{4*18 BTD^2 + 24 BTD^2} = \frac{12BT^2D}{96 BTD^2} = \frac{T}{8D}}$$
 
-So the takeaway is that **dot-product attention FLOPs only become dominant during training once T>8D**. For D ~ 8k, this would be ~64K tokens. This makes some sense, since it means as the MLP size increases, the attention FLOPs become less critical. For large models, the quadratic cost of attention is not actually a huge obstacle to longer context training. However, for smaller models, even e.g. Gemma-27B, D=4608 which means attention becomes dominant around 32k sequence lengths. Flash Attention also helps alleviate the cost of long-context, which we discuss briefly [in Appendix A](#appendix-a-how-does-flash-attention-work).
+So the takeaway is that **dot-product attention FLOPs only become dominant during training once T>8D**. For D ~ 8k, this would be ~64K tokens. This makes some sense, since it means as the MLP size increases, the attention FLOPs become less critical. For large models, the quadratic cost of attention is not actually a huge obstacle to longer context training. However, for smaller models, even e.g. Gemma-27B, D=4608 which means attention becomes dominant around 37k sequence lengths. Flash Attention also helps alleviate the cost of long-context, which we discuss briefly [in Appendix A](#appendix-a-how-does-flash-attention-work).
 
 ## Miscellaneous Math
 
@@ -271,7 +271,7 @@ $$\frac{df}{dx} = \exp(g(x)) \cdot \frac{dg}{dx}$$
 
 so to avoid recomputing we need to save $$g(x)$$ and $$\exp(g(x))$$ from the forward pass. To avoid saving this much memory, we can choose to only save some fraction of the intermediate activations. Here are a few strategies we use.
 
-* **Block remat**: only save the input to each layer. This is the most aggressive method we use and only saves 1 checkpoint per layer, meaning we'd only save 4.2TB in the example above. This forces us to repeat essentially all forward pass FLOPs in the backward pass, meaning we increase our FLOPs from $$6ND$$ to roughly $$8ND$$.
+* **Block remat**: only save the input to each layer. This is the most aggressive method we use and only saves 1 checkpoint per layer, meaning we'd only save 4.2TB in the example above. This forces us to repeat essentially all forward pass FLOPs in the backward pass, meaning we increase our FLOPs from $$6 \cdot \text{num params} \cdot \text{num tokens}$$ to roughly $$8 \cdot \text{num params} \cdot \text{num tokens}$$.
 * **Big matmuls only:** another simple policy is to only save the outputs of large matmuls. This lets us avoid recomputing any large matmuls during the backward pass, but still makes us recompute other activation functions and parts of attention. This reduces 20 per layer to closer to 7 per layer.
 
 This is by no means comprehensive. When using JAX, these are typically controlled by `jax.remat`/`jax.checkpoint` (you can read more [here](https://jax.readthedocs.io/en/latest/_autosummary/jax.checkpoint.html)).
@@ -355,7 +355,7 @@ $$\text{U[B, T, S, K, G]} \cdot \text{V[B, S, K, H]} \rightarrow \text{X[B, T, K
 
 So our total bytes is $$2 * \text{sizeof}(Q) + 2 * \text{sizeof(K or V)} = 4BTNH + 4BSKH = 4BHK * (TG + S)$$, total FLOPs is $$4BTSNH + O(BTSN)$$ and the arithmetic intensity is $$4BTSKGH / (4BHK * (TG + S))$$.
 
-So basically, during prefill we have $$S=T$$ so we have an arithmetic intensity of $$4BT^2KGH / 4BHKT \cdot (G+1) = TG/(G + 1) = O(T)$$. During generation, $$T=1$$ so we have $$4BSKGH / (4BHK \cdot (G + S)) = SG / (G + S) \rightarrow G$$ assuming $$S$$ is very large. Depending on how you interpret the question, during prefill or training self-attention is compute bound at S=240 assuming no sequence sharding. During generation, we are never compute bound because $$G$$ is small. Nonetheless, however, you can see that increasing $$G$$ leads to us being closer to compute bound.
+So basically, during prefill we have $$S=T$$ so we have an arithmetic intensity of $$4BT^2KGH / 4BHKT \cdot (G+1) = TG/(G + 1) = O(T)$$. During generation, $$T=1$$ so we have $$4BSKGH / (4BHK \cdot (G + S)) = SG / (G + S) \rightarrow G$$ assuming $$S$$ is very large. Depending on how you interpret the question, during prefill or training self-attention is compute-bound at S=240 assuming no sequence sharding. During generation, we are never compute-bound because $$G$$ is small. Nonetheless, you can see that increasing $$G$$ leads to us being closer to compute-bound.
 
 {% enddetails %}
 
@@ -373,7 +373,7 @@ This is purely a question of when $$24BTDNH = 12BT^2NH$$. Simplifying we get $$2
 
 Saving only the seven matmul outputs (Q, K, V, O, W₁, W₂, W₃) means the backward pass must recompute the two attention matmuls
 
-$$QK^{\top} \quad\text{and}\quad \operatorname{softmax}(QK^{\top})V.$$
+$$QK^{\top} \quad\text{and}\quad \operatorname{softmax}(QK^{\top})V$$
 
 in order to obtain $\frac{\partial L}{\partial W_\text{O}}$.
 
@@ -399,9 +399,9 @@ From the spec sheet [here](https://lenovopress.lenovo.com/lp1814.pdf), we find 3
 
 {% details Click here for the answer. %}
 
-Because we have $E$ copies of each expert, in int8, for each weight matrix we need to load $E \cdot D \cdot F$ bytes. Because each token activates $k$ experts, for each weight matrix we have $2\cdot k \cdot B \cdot D \cdot F$ FLOPs. To be compute-bound with bfloat16 FLOPs, we need an arithmetic intensity over 240 which happens when $(2\cdot k \cdot BDF) / EDF > 240$ or $k \cdot B / E > 120$.
+Because we have $E$ copies of each expert, in int8, for each weight matrix we need to load $E \cdot D \cdot F$ bytes. Because each token activates $k$ experts, for each weight matrix we have $2\cdot k \cdot B \cdot D \cdot F$ FLOPs. To be compute-bound with int8 weights and bfloat16 FLOPs, we need the arithmetic intensity (FLOPs per byte loaded) to exceed the TPU's ~240 FLOPs/byte, which happens when $(2\cdot k \cdot BDF) / EDF > 240$ or $k \cdot B / E > 120$.
 
-Therefore, we need $B > 120 \cdot E / k$ to be compute bound. For DeepSeek, this gives us $B > 120 \cdot 256 / 8 = 3840$. This is a remarkably large batch size at generation time.
+Therefore, we need $B > 120 \cdot E / k$ to be compute-bound. For DeepSeek, this gives us $B > 120 \cdot 256 / 8 = 3840$. This is a remarkably large batch size at generation time.
 
 {% enddetails %}
 
@@ -411,9 +411,9 @@ Therefore, we need $B > 120 \cdot E / k$ to be compute bound. For DeepSeek, this
 
 ### Appendix A: How does Flash Attention work?
 
-The traditional objection to scaling Transformers to very long context is that the attention FLOPs and memory usage scale quadratically with context length. While it's true that the attention QK product has shape $[B, T, S, N]$ where B is the batch size, S and T are the Q and K sequence dims, and N is the number of heads, this claim comes with some serious caveats:
+The traditional objection to scaling Transformers to very long context is that the attention FLOPs and memory usage scale quadratically with context length. While it's true that the attention QK product has shape $[B, T, S, N]$ where B is the batch size, T and S are the Q and K sequence dims, and N is the number of heads, this claim comes with some serious caveats:
 
-1. As we noted earlier, even though this is quadratic, the attention FLOPs only dominate when $$S > 8 \cdot D$$, and especially during training the memory of a single attention matrix is small compared to all of the weights and activation checkpoints living in memory, especially when sharded.
+1. As we noted earlier, even though this is quadratic, the attention FLOPs only dominate when $$T > 8 \cdot D$$, and especially during training the memory of a single attention matrix is small compared to all of the weights and activation checkpoints living in memory, especially when sharded.
 2. We don't need to materialize the full attention matrix in order to compute attention! We can compute local sums and maxes and avoid ever materializing more than a small chunk of the array. While the total FLOPs is still quadratic, we drastically reduce memory pressure.
 
 This second observation was first made by [Rabe et al. 2021](https://arxiv.org/abs/2112.05682) and later in the [Flash Attention paper](https://arxiv.org/abs/2205.14135) (Dao et al. 2022). The basic idea is to compute the attention in chunks of K/V, where we compute the local softmax and some auxiliary statistics, then pass them onto the next chunk which combines them with its local chunk. Specifically, we compute
@@ -426,7 +426,7 @@ With these, we can compute the new max, the new running sum, and the new output 
 
 $$\text{Attn}(Q, K, V) = \sum_i \frac{\exp(Q \cdot K_i - \max_j Q \cdot K_j) V_i}{\sum_l \exp(Q \cdot K_l - \max_j Q \cdot K_j)}$$
 
-The max is subtracted for numerical stability and can be added without affecting the outcome since $$\sum_i \exp(a_i + b) = \exp(b) \sum \exp(a)$$. Looking just at the denominator above,  if we imagine having two contiguous chunks of key vectors, $$K^1$$ and $$K^2$$ and we compute the local softmax sums $$L^1$$ and $$L^2$$ for each
+The max is subtracted for numerical stability and can be added without affecting the outcome since $$\sum_i \exp(a_i + b) = \exp(b) \sum \exp(a)$$. Looking just at the denominator above, if we imagine having two contiguous chunks of key vectors, $$K^1$$ and $$K^2$$ and we compute the local softmax sums $$L^1$$ and $$L^2$$ for each
 
 $$L^1 = \sum_i \exp(Q \cdot K_i^1 - \max_j Q \cdot K_j^1)$$
 

@@ -52,7 +52,7 @@
           const style = document.createElement("style");
           style.setAttribute("data-sidenote", "");
           style.textContent =
-            "sup span." + HOVER_CLASS + "{color:#0a58ca;}";
+            "sup span." + HOVER_CLASS + "{color:#4da3ff;}";
           root.appendChild(style);
         }
         hover.style.display = "none";

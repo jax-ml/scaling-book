@@ -507,8 +507,8 @@ d-article.has-sidenotes {
     margin-right: 1px;
   }
 
-  // Hovering the in-text marker or the sidenote nudges the pair's number color.
+  // Hovering the in-text marker or the sidenote brightens the pair's number.
   .tufte-sidenote.tufte-hover .tufte-sidenote-number {
-    color: #0a58ca;
+    color: #4da3ff;
   }
 }

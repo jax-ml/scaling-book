@@ -523,6 +523,8 @@ d-article.has-sidenotes {
 }
 
 @media (min-width: 1000px) {
+  // Absolute (not fixed) so it sits at the top of the page and scrolls away
+  // once you read past it.
   .tufte-settings {
     display: block;
     position: absolute;

@@ -508,7 +508,9 @@ d-article.has-sidenotes {
   }
 
   // Hovering the in-text marker or the sidenote brightens the pair's number.
+  // text-shadow gives a visible glow on a tiny glyph without any layout shift.
   .tufte-sidenote.tufte-hover .tufte-sidenote-number {
-    color: #4da3ff;
+    color: #66b3ff;
+    text-shadow: 0 0 6px rgba(77, 163, 255, 0.9);
   }
 }

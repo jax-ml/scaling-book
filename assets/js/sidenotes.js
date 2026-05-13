@@ -82,12 +82,13 @@
     return r.width > 0 || r.height > 0;
   }
 
-  // Top of the text line containing the marker, relative to the article.
+  // Box of the text line containing the marker, relative to the article.
   // d-footnote is inline; its box height equals the line-height of the
   // surrounding text (the sup is position:relative so it doesn't grow the
-  // box), so rect.top is the line top.
-  function lineTop(fn, articleTop) {
-    return fn.getBoundingClientRect().top - articleTop;
+  // box), so rect.top/height are the line top/height.
+  function lineBox(fn, articleTop) {
+    const r = fn.getBoundingClientRect();
+    return { top: r.top - articleTop, height: r.height };
   }
 
   function setHoverPair(fn, note, on) {
@@ -172,7 +173,12 @@
 
       container.appendChild(note);
 
-      const wantTop = lineTop(fn, articleTop);
+      // Center the sidenote's first line on the body text line containing the
+      // marker, so the smaller sidenote text doesn't float above the body
+      // baseline (which is what raw top-to-top alignment gives).
+      const lb = lineBox(fn, articleTop);
+      const noteLH = parseFloat(getComputedStyle(note).lineHeight) || lb.height;
+      const wantTop = lb.top + (lb.height - noteLH) / 2;
       const top = Math.max(wantTop, prevBottom + SIDENOTE_GAP);
       note.style.top = top + "px";
       prevBottom = top + note.getBoundingClientRect().height;

@@ -525,7 +525,7 @@ d-article.has-sidenotes {
 @media (min-width: 1000px) {
   .tufte-settings {
     display: block;
-    position: fixed;
+    position: absolute;
     top: 70px;
     right: 18px;
     z-index: 100;

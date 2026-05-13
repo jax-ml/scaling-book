@@ -507,13 +507,8 @@ d-article.has-sidenotes {
     margin-right: 1px;
   }
 
-  // Hovering the in-text marker or the sidenote flashes the pair.
-  .tufte-sidenote.tufte-hover {
-    color: var(--global-text-color, rgba(0, 0, 0, 0.9));
-    .tufte-sidenote-number {
-      background: rgba(0, 123, 255, 0.18);
-      border-radius: 3px;
-      padding: 0 2px;
-    }
+  // Hovering the in-text marker or the sidenote nudges the pair's number color.
+  .tufte-sidenote.tufte-hover .tufte-sidenote-number {
+    color: #0a58ca;
   }
 }

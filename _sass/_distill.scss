@@ -519,13 +519,12 @@ d-article.has-sidenotes {
     // centered Bootstrap .container; give the nav the same grid template and
     // pin the container to text-start so the brand and links share the text
     // column's left edge.
-    #navbar {
+    // Elements that don't use the distill grid (navbar's Bootstrap container,
+    // giscus comments) get the same column template applied directly so their
+    // content can be pinned to text-start and line up with the body.
+    #navbar,
+    #giscus_thread {
       display: grid;
-      grid-template-columns: inherit;
-      // navbar isn't in the grid stack above, so it won't inherit the columns.
-      // Re-apply them here (1000px and 1180px versions are the same shape, so
-      // one definition with the 1180px sizes is close enough; the 1000-1179px
-      // band is narrow).
       grid-template-columns:
         [screen-start] minmax(24px, 0.6fr)
         [page-start text-start]
@@ -537,12 +536,22 @@ d-article.has-sidenotes {
       grid-column-gap: 32px;
       padding-left: 0;
       padding-right: 0;
+    }
 
-      > .container {
+    #navbar > .container {
+      grid-column: text-start / page-end;
+      max-width: none;
+      margin: 0;
+      padding-left: 0;
+    }
+
+    #giscus_thread {
+      // The include sets inline max-width/margin; override them.
+      max-width: none !important;
+      margin: 0 !important;
+
+      > * {
         grid-column: text-start / page-end;
-        max-width: none;
-        margin: 0;
-        padding-left: 0;
       }
     }
   }

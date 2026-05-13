@@ -897,13 +897,12 @@ code {
   padding: 3px 3px;
 }
 
-// Transitioning Themes
+// Transitioning Themes — switch instantly, no fade
 html.transition,
 html.transition *,
 html.transition *:before,
 html.transition *:after {
-  transition: all 750ms !important;
-  transition-delay: 0 !important;
+  transition: none !important;
 }
 
 // Extra Markdown style (post Customization)

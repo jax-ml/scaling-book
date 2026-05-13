@@ -52,6 +52,7 @@
           const style = document.createElement("style");
           style.setAttribute("data-sidenote", "");
           style.textContent =
+            "sup span{cursor:pointer;}" +
             "sup span." + HOVER_CLASS + "{color:#ff8c00;}";
           root.appendChild(style);
         }
@@ -117,12 +118,14 @@
     };
     fn.addEventListener("mouseenter", on);
     fn.addEventListener("mouseleave", off);
+    fn.addEventListener("click", jump);
     note.addEventListener("mouseenter", on);
     note.addEventListener("mouseleave", off);
     note.addEventListener("click", jump);
     return () => {
       fn.removeEventListener("mouseenter", on);
       fn.removeEventListener("mouseleave", off);
+      fn.removeEventListener("click", jump);
       note.removeEventListener("mouseenter", on);
       note.removeEventListener("mouseleave", off);
       note.removeEventListener("click", jump);

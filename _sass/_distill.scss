@@ -507,10 +507,10 @@ d-article.has-sidenotes {
     margin-right: 1px;
   }
 
-  // Hovering the in-text marker or the sidenote brightens the pair's number.
-  // text-shadow gives a visible glow on a tiny glyph without any layout shift.
+  // Hovering the in-text marker or the sidenote flips the pair's number to
+  // orange — a hue shift is far more visible on a tiny glyph than any
+  // same-hue lightness change, and a pure color change doesn't shift layout.
   .tufte-sidenote.tufte-hover .tufte-sidenote-number {
-    color: #66b3ff;
-    text-shadow: 0 0 6px rgba(77, 163, 255, 0.9);
+    color: #ff8c00;
   }
 }

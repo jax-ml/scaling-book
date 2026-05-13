@@ -84,6 +84,15 @@
   </script>
 {% endif %}
 
+<!-- Set Tufte-mode class before first paint to avoid layout flicker -->
+<script>
+  try {
+    if (localStorage.getItem("tufte-sidenotes-enabled") === "1") {
+      document.documentElement.classList.add("tufte-mode");
+    }
+  } catch (e) {}
+</script>
+
 {% if page.map %}
   <!-- GeoJSON support via Leaflet -->
   <link

@@ -470,21 +470,115 @@ d-article.has-sidenotes {
     display: block;
     grid-column: gutter-start / screen-end;
     position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    max-width: 300px;
-    padding-left: 20px; // breathing room between body text and sidenotes
-    padding-right: 24px;
-    box-sizing: border-box;
+    inset: 0;
     pointer-events: none; // don't block clicks/scroll on the white margin
+  }
+
+  // --- Tufte-mode layout experiment ---------------------------------------
+  // When the "Tufte footnotes" toggle is on, drop the left TOC and slide the
+  // text column left to where the TOC was, freeing up a wider right gutter
+  // for sidenotes (a la siboehm.com/articles/22/CUDA-MMM). This works by
+  // redefining where the named [text-start]/[text-end]/[gutter-*] lines fall
+  // in the distill grid, so everything that places itself with
+  // `grid-column: text` (article body, title, byline, appendix) moves left
+  // automatically without per-element overrides.
+  html.tufte-mode {
+    .base-grid,
+    distill-header,
+    d-title,
+    d-abstract,
+    d-article,
+    d-appendix,
+    distill-appendix,
+    d-byline,
+    d-footnote-list,
+    d-citation-list,
+    distill-footer {
+      // Asymmetric outer margins (0.6fr left, 1fr right) pull the text column
+      // toward the left edge a la siboehm.com, freeing more room on the right.
+      grid-template-columns:
+        [screen-start] minmax(24px, 0.6fr)
+        [page-start kicker-start middle-start text-start kicker-end]
+        62px 62px 62px 62px 62px 62px 62px 62px
+        [text-end gutter-start]
+        62px 62px 62px 62px
+        [middle-end page-end gutter-end]
+        1fr [screen-end];
+    }
+
+    d-article d-contents {
+      display: none;
+    }
+
+    .tufte-sidenote {
+      left: 70px;
+      max-width: 380px;
+    }
+
+    // Align the navbar with the shifted text column. The navbar uses a
+    // centered Bootstrap .container; give the nav the same grid template and
+    // pin the container to text-start so the brand and links share the text
+    // column's left edge.
+    #navbar {
+      display: grid;
+      grid-template-columns: inherit;
+      // navbar isn't in the grid stack above, so it won't inherit the columns.
+      // Re-apply them here (1000px and 1180px versions are the same shape, so
+      // one definition with the 1180px sizes is close enough; the 1000-1179px
+      // band is narrow).
+      grid-template-columns:
+        [screen-start] minmax(24px, 0.6fr)
+        [page-start text-start]
+        60px 60px 60px 60px 60px 60px 60px 60px
+        [text-end gutter-start]
+        60px 60px 60px 60px
+        [page-end gutter-end]
+        1fr [screen-end];
+      grid-column-gap: 32px;
+      padding-left: 0;
+      padding-right: 0;
+
+      > .container {
+        grid-column: text-start / page-end;
+        max-width: none;
+        margin: 0;
+        padding-left: 0;
+      }
+    }
+  }
+}
+
+@media (min-width: 1180px) {
+  html.tufte-mode {
+    .base-grid,
+    distill-header,
+    d-title,
+    d-abstract,
+    d-article,
+    d-appendix,
+    distill-appendix,
+    d-byline,
+    d-footnote-list,
+    d-citation-list,
+    distill-footer {
+      grid-template-columns:
+        [screen-start] minmax(24px, 0.6fr)
+        [page-start kicker-start middle-start text-start kicker-end]
+        60px 60px 60px 60px 60px 60px 60px 60px
+        [text-end gutter-start]
+        60px 60px 60px 60px
+        [middle-end page-end gutter-end]
+        1fr [screen-end];
+    }
   }
 
   .tufte-sidenote {
     position: absolute;
-    left: 0;
-    right: 0;
+    // left/right position within the gutter container; abspos ignores
+    // container padding, so the gap from body text is set here.
+    left: 20px;
+    right: 24px;
+    max-width: 260px;
     pointer-events: auto;
     cursor: pointer;
     font-size: 0.8em;

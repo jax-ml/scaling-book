@@ -39,6 +39,7 @@
     try {
       localStorage.setItem(PREF_KEY, on ? "1" : "0");
     } catch (e) {}
+    document.documentElement.classList.toggle("tufte-mode", on);
   }
 
   function getArticle() {
@@ -287,6 +288,9 @@
     const article = getArticle();
     if (!article) return;
 
+    // Sync class in case the early head script and the deferred script see
+    // different localStorage state (e.g. cleared mid-session).
+    document.documentElement.classList.toggle("tufte-mode", isEnabled());
     buildSettings();
     scheduleBuild();
     window.addEventListener("resize", scheduleBuild);

@@ -441,3 +441,79 @@ d-hover-box ul {
   white-space: nowrap;
   font-weight: 500;
 }
+
+// -----------------------------------------------------------------------------
+// Tufte-style margin sidenotes (see assets/js/sidenotes.js).
+//
+// On wide viewports each <d-footnote> gets a copy of its content placed in the
+// right gutter, vertically aligned with the marker. The container is positioned
+// by JS using the gutter grid column as a horizontal reference. On narrower
+// viewports (where d-article > * spans `page` and the gutter disappears) the
+// JS removes the container and the native d-hover-box popup takes over.
+// -----------------------------------------------------------------------------
+
+d-article.has-sidenotes {
+  position: relative;
+}
+
+.tufte-sidenotes {
+  display: none;
+}
+
+@media (min-width: 1000px) {
+  // Occupy the right gutter (and the screen margin beyond it) for the full
+  // height of the article. With grid-column set, the abspos containing block
+  // is that grid area, so left/right: 0 fill it horizontally and top/bottom: 0
+  // fill the article vertically (grid-row: auto on an abspos item spans the
+  // padding box).
+  d-article > .tufte-sidenotes {
+    display: block;
+    grid-column: gutter-start / screen-end;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    max-width: 300px;
+    padding-right: 16px;
+    box-sizing: border-box;
+    pointer-events: none; // don't block clicks/scroll on the white margin
+  }
+
+  .tufte-sidenote {
+    position: absolute;
+    left: 0;
+    right: 0;
+    pointer-events: auto;
+    font-size: 0.8em;
+    line-height: 1.5em;
+    color: var(--global-text-color-light, rgba(0, 0, 0, 0.6));
+
+    a {
+      color: inherit;
+    }
+
+    // Math and code in footnotes can be wide; keep them from spilling out.
+    .katex,
+    code {
+      font-size: 0.95em;
+    }
+    overflow-wrap: break-word;
+  }
+
+  .tufte-sidenote-number {
+    color: #007bff; // matches the d-footnote marker color
+    font-weight: 600;
+    margin-right: 1px;
+  }
+
+  // Hovering the in-text marker or the sidenote flashes the pair.
+  .tufte-sidenote.tufte-hover {
+    color: var(--global-text-color, rgba(0, 0, 0, 0.9));
+    .tufte-sidenote-number {
+      background: rgba(0, 123, 255, 0.18);
+      border-radius: 3px;
+      padding: 0 2px;
+    }
+  }
+}

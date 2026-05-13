@@ -106,15 +106,26 @@
   function bindHoverPair(fn, note) {
     const on = () => setHoverPair(fn, note, true);
     const off = () => setHoverPair(fn, note, false);
+    const jump = (e) => {
+      // Don't hijack clicks on links inside the sidenote.
+      if (e.target.closest("a")) return;
+      fn.scrollIntoView({ behavior: "smooth", block: "center" });
+      // Briefly flash the marker so it's findable once the mouse leaves the
+      // sidenote (which would otherwise immediately drop the highlight).
+      setHoverPair(fn, note, true);
+      setTimeout(off, 1200);
+    };
     fn.addEventListener("mouseenter", on);
     fn.addEventListener("mouseleave", off);
     note.addEventListener("mouseenter", on);
     note.addEventListener("mouseleave", off);
+    note.addEventListener("click", jump);
     return () => {
       fn.removeEventListener("mouseenter", on);
       fn.removeEventListener("mouseleave", off);
       note.removeEventListener("mouseenter", on);
       note.removeEventListener("mouseleave", off);
+      note.removeEventListener("click", jump);
       setHoverPair(fn, note, false);
     };
   }

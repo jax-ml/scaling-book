@@ -551,7 +551,7 @@ d-article.has-sidenotes {
       margin: 0 !important;
 
       > * {
-        grid-column: text-start / page-end;
+        grid-column: text;
       }
     }
   }

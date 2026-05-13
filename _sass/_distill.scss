@@ -474,9 +474,9 @@ d-article.has-sidenotes {
     bottom: 0;
     left: 0;
     right: 0;
-    max-width: 320px;
+    max-width: 300px;
     padding-left: 20px; // breathing room between body text and sidenotes
-    padding-right: 16px;
+    padding-right: 24px;
     box-sizing: border-box;
     pointer-events: none; // don't block clicks/scroll on the white margin
   }

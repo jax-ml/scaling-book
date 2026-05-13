@@ -515,3 +515,63 @@ d-article.has-sidenotes {
     color: #ff8c00;
   }
 }
+
+// Floating settings control for sidenotes. Hidden below the breakpoint where
+// sidenotes are possible; sits below the fixed nav bar on the right.
+.tufte-settings {
+  display: none;
+}
+
+@media (min-width: 1000px) {
+  .tufte-settings {
+    display: block;
+    position: fixed;
+    top: 70px;
+    right: 18px;
+    z-index: 100;
+    font-size: 0.85rem;
+  }
+
+  .tufte-settings-btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: var(--global-text-color-light, rgba(0, 0, 0, 0.6));
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover {
+      color: var(--global-text-color, rgba(0, 0, 0, 0.9));
+    }
+  }
+
+  .tufte-settings-panel {
+    position: absolute;
+    top: 36px;
+    right: 0;
+    min-width: 160px;
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: var(--global-bg-color, #fff);
+    color: var(--global-text-color-light, rgba(0, 0, 0, 0.7));
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    input[type="checkbox"] {
+      margin: 0;
+    }
+  }
+}

@@ -15,6 +15,7 @@
   const CONTAINER_CLASS = "tufte-sidenotes";
   const NOTE_CLASS = "tufte-sidenote";
   const HOVER_CLASS = "tufte-hover";
+  const PREF_KEY = "tufte-sidenotes-enabled";
 
   let container = null;
   let pairs = []; // [{fn, note, off}]
@@ -24,6 +25,20 @@
 
   function isWide() {
     return window.matchMedia(WIDE_QUERY).matches;
+  }
+
+  function isEnabled() {
+    try {
+      return localStorage.getItem(PREF_KEY) === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function setEnabled(on) {
+    try {
+      localStorage.setItem(PREF_KEY, on ? "1" : "0");
+    } catch (e) {}
   }
 
   function getArticle() {
@@ -147,7 +162,7 @@
     if (!article) return;
     const footnotes = getFootnotes(article);
 
-    if (!isWide() || footnotes.length === 0) {
+    if (!isWide() || !isEnabled() || footnotes.length === 0) {
       clearSidenotes(article, footnotes);
       return;
     }
@@ -212,10 +227,67 @@
     });
   }
 
+  // Floating settings control (gear button + small popover with a checkbox).
+  // Only shown when the viewport is wide enough for sidenotes to be possible.
+  function buildSettings() {
+    const wrap = document.createElement("div");
+    wrap.className = "tufte-settings";
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "tufte-settings-btn";
+    btn.title = "Display settings";
+    btn.setAttribute("aria-haspopup", "true");
+    btn.setAttribute("aria-expanded", "false");
+    btn.innerHTML =
+      '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">' +
+      '<path fill="currentColor" d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 ' +
+      ".12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.5.5 " +
+      "0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.24-1.12.55-1.62.94l-2.39-.96a.5.5 " +
+      "0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 " +
+      "1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.6.22l2.39-.96c.5.39 1.04.7 " +
+      "1.62.94l.36 2.54c.04.24.25.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.58-.24 " +
+      "1.12-.55 1.62-.94l2.39.96c.21.09.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 " +
+      '15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>';
+    wrap.appendChild(btn);
+
+    const panel = document.createElement("div");
+    panel.className = "tufte-settings-panel";
+    panel.hidden = true;
+    const id = "tufte-sidenotes-toggle";
+    panel.innerHTML =
+      '<label for="' + id + '">' +
+      '<input type="checkbox" id="' + id + '"> Tufte footnotes' +
+      "</label>";
+    wrap.appendChild(panel);
+
+    const cb = panel.querySelector("input");
+    cb.checked = isEnabled();
+    cb.addEventListener("change", () => {
+      setEnabled(cb.checked);
+      scheduleBuild();
+    });
+
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      panel.hidden = !panel.hidden;
+      btn.setAttribute("aria-expanded", String(!panel.hidden));
+    });
+    document.addEventListener("click", (e) => {
+      if (!panel.hidden && !wrap.contains(e.target)) {
+        panel.hidden = true;
+        btn.setAttribute("aria-expanded", "false");
+      }
+    });
+
+    document.body.appendChild(wrap);
+  }
+
   function init() {
     const article = getArticle();
     if (!article) return;
 
+    buildSettings();
     scheduleBuild();
     window.addEventListener("resize", scheduleBuild);
     window.addEventListener("load", scheduleBuild);

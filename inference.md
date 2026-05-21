@@ -602,14 +602,14 @@ Firstly, copying from above, normal 1D model parallelism would have $T_\text{mod
 
 $$\begin{align*}
 T_\text{model parallel comms} > T_\text{2D comms} \iff \frac{4BD}{3 \cdot W_\text{ici}} > \frac{\sqrt{128} BD}{\sqrt{N} \cdot W_\text{ici}} \\
-\iff N > 128 \cdot \left(\frac{3}{4}\right)^2 = 81
+\iff N > 128 \cdot \left(\frac{3}{4}\right)^2 = 72
 \end{align*}$$
 
 For a general $F$, we claim this condition is
 
 $$N > 32 \cdot \left(\frac{F}{D}\right) \cdot \left(\frac{3}{4}\right)^2$$
 
-So that tells us if we have more than 81 chips, we're better off using this new scheme. Now this is a slightly weird result because we've historically found ourselves ICI bound at around ~20 way tensor parallelism. But here, even if we're communication-bound, our total communication continues to decrease with the number of total chips! What this tells us is that we can continue to increase our chips, increase our batch size, do more parameter scaling, and see reduced latency.
+So that tells us if we have more than 72 chips, we're better off using this new scheme. Now this is a slightly weird result because we've historically found ourselves ICI bound at around ~20 way tensor parallelism. But here, even if we're communication-bound, our total communication continues to decrease with the number of total chips! What this tells us is that we can continue to increase our chips, increase our batch size, do more parameter scaling, and see reduced latency.
 
 {% enddetails %}
 

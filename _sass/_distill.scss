@@ -303,9 +303,16 @@ mjx-container {
     display: none;
   }
 
+  // Let wide tables (e.g. the TPU spec tables) scroll horizontally instead
+  // of squishing to the viewport width. display: block makes the table its
+  // own scroll container; fit-content keeps narrow tables narrow while
+  // capping wide ones at the viewport so the overflow scrolls.
   d-article table {
-    width: 100%;
-    min-width: 100%;
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   // Keep navbar expanded on small screens

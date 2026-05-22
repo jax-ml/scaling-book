@@ -196,7 +196,7 @@ Here are some specific numbers for our chips:
 | <span class="nowrap-header">TPU v5p</span> | 16x20x28 |   2x2x1   |       96GB        |        2.8e12         |       4.59e14       |       9.18e14       |
 | <span class="nowrap-header">TPU v5e</span> |  16x16   |    4x2    |       16GB        |        8.2e11         |       1.97e14       |       3.94e14       |
 | <span class="nowrap-header">TPU v6e</span> |  16x16   |    4x2    |       32GB        |        1.6e12         |       9.20e14       |       1.84e15       |
-| <span class="nowrap-header">TPU7x</span>   | 4x4x144  |   2x2x1   |       192GB       |        7.4e12         |       2.30e15       |       4.61e15       |
+| <span class="nowrap-header">TPU7x</span>   | 4x4x576  |   2x2x1   |       192GB       |        7.4e12         |       2.30e15       |       4.61e15       |
 
 Host size refers to the topology of TPUs connected to a single host (e.g. TPU v5e has a single CPU host connected to 8 TPUs in a 4x2 topology). See the [TPU7x documentation](https://docs.cloud.google.com/tpu/docs/tpu7x) for more details on the latest generation. Here are interconnect figures:
 

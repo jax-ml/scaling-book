@@ -4,6 +4,18 @@
 
 d-byline {
   border-top-color: var(--global-divider-color) !important;
+  // The byline (author list) is populated by the distill JS after load, which
+  // grows it from ~one line to the full author grid and reflows everything
+  // below. Reserve its rendered height up front so the page doesn't jump. The
+  // author grid is 2 columns below 768px (taller) and 4 columns above.
+  box-sizing: border-box;
+  min-height: 236px;
+}
+
+@media (min-width: 768px) {
+  d-byline {
+    min-height: 210px;
+  }
 }
 
 d-byline h3 {

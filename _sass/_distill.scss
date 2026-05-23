@@ -305,11 +305,14 @@ mjx-container {
 
   // Let wide tables (e.g. the TPU spec tables) scroll horizontally instead
   // of squishing to the viewport width. display: block makes the table its
-  // own scroll container; fit-content keeps narrow tables narrow while
-  // capping wide ones at the viewport so the overflow scrolls.
+  // own scroll container; min-width: 0 lets it shrink to the grid column
+  // (Safari/WebKit doesn't auto-apply the scroll-container minimum, so without
+  // this the table's content width blows out the text column and the page
+  // content gets clipped). max-width caps it at the column so overflow scrolls.
   d-article table {
     display: block;
-    width: fit-content;
+    width: auto;
+    min-width: 0;
     max-width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;

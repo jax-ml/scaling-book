@@ -46,9 +46,14 @@
   --global-danger-block-text: #600;
   --global-danger-block-title: #c00;
 
+  // The toggle icons are inline SVGs sized like the old 1em font glyphs. Use
+  // margin (not padding) for the offset: with Bootstrap's global border-box
+  // sizing, padding would eat into the SVG's box and shrink the icon.
   #light-toggle-system {
-    padding-left: 10px;
-    padding-top: 12px;
+    margin-left: 10px;
+    margin-top: 12px;
+    width: 14px;
+    height: 14px;
     display: block;
   }
 
@@ -135,8 +140,10 @@ html[data-theme-setting="dark"] {
   }
 
   #light-toggle-dark {
-    padding-left: 10px;
-    padding-top: 12px;
+    margin-left: 10px;
+    margin-top: 12px;
+    width: 14px;
+    height: 14px;
     display: block;
   }
 
@@ -160,8 +167,10 @@ html[data-theme-setting="light"] {
   }
 
   #light-toggle-light {
-    padding-left: 10px;
-    padding-top: 12px;
+    margin-left: 10px;
+    margin-top: 12px;
+    width: 14px;
+    height: 14px;
     display: block;
   }
 }

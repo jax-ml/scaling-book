@@ -301,7 +301,7 @@ This way the actual multiplication can be done fully on each device.
 
 <p markdown=1 class="takeaway">**Takeaway:** When multiplying matrices where one of the matrices is sharded along the contracting dimension, we generally AllGather it first so the contraction is no longer sharded, then do a local matmul.</p>
 
-Note that when **B** is not also sharded along X, we could also do the local partial matmul and then sum (or *AllReduce*) the sharded partial sums, which can be faster in some cases. See Question 4 [below](#some-problems-to-work).
+Note that when **B** is not also sharded along X, we could also do the local partial matmul and then sum (or *AllReduce*) the sharded partial sums, which lets us shard the compute but usually has a higher communication cost. This can be faster in some cases, although it's usually true in practice that **B** will be sharded. Question 4 [below](#some-problems-to-work) works through when this is better.
 
 **What is an AllGather?** An AllGather is the first core [MPI](https://en.wikipedia.org/wiki/Message_Passing_Interface) communication primitive we will discuss. An AllGather *removes the sharding* along an axis and reassembles the shards spread across devices onto *each* device along that axis. Using the notation above, an AllGather removes a subscript from a set of axes, e.g.
 
@@ -470,13 +470,13 @@ AllToAlls are typically required to rearrange sharded layouts between different 
 
 {% include figure.liquid path="assets/img/all-to-all.gif" class="img-fluid" %}
 
-If we generalize to an ND AllToAll, the overall cost for an array of $V$ bytes on an AxBxC mesh is
+If we generalize to an ND AllToAll, the overall cost for an array of $V$ total bytes (summed across all devices) on an AxBxC mesh is
 
 $$T_\text{comms per AllToAll} = \frac{V \cdot \max(A, B, C, ...)}{4 \cdot N \cdot W_\text{ici}}$$
 
-where as usual $W_\text{ici}$ is the bidirectional ICI bandwidth. For a 1D mesh, this reduces to $V / (4 \cdot W_\text{ici})$, which is 1 / 4 the cost of an AllGather. In 2D, the cost actually scales down with the size of the smallest axis.
+where as usual $W_\text{ici}$ is the bidirectional ICI bandwidth and $N = A \cdot B \cdot C \cdot \ldots$ is the total number of devices. Equivalently, in terms of the per-device bytes $V / N$, the cost is $(V / N) \cdot \max(A, B, C, ...) / (4 \cdot W_\text{ici})$. For a 1D mesh, this reduces to $V / (4 \cdot W_\text{ici})$, which is 1 / 4 the cost of an AllGather. In 2D, the cost actually scales down with the size of the smallest axis.
 
-*Aside: If you want a hand-wavy derivation of this fact, start with a 1D torus $\mathbb{Z} / N\mathbb{Z}$. If we pick a source and target node at random, they are on average N / 4 hops from each other, giving us a cost of $(V \cdot N) / (4 * N)$. Now if we consider an ND torus, each axis is basically independent. Each node has $1 / N$ bytes and on average has to hop its data $\max(A, B, C, …) / 4$ hops.*
+*Aside: If you want a hand-wavy derivation of this fact, start with a 1D torus $\mathbb{Z} / N\mathbb{Z}$. If we pick a source and target node at random, they are on average N / 4 hops from each other, giving us a cost of $(V \cdot N) / (4 * N)$. Now if we consider an ND torus, each axis is basically independent. Each node has $1 / N$ bytes and on average has to hop its data $\max(A, B, C, …) / 4$ hops. You can also derive this from bisection bandwidth: in an AllToAll, each half of the mesh sends half its data ($V / 4$ bytes) to the other half. The narrowest bisection cuts perpendicular to the longest axis, crossing $2 \cdot N / \max(A, B, …)$ links (two cut planes, counting wraparound), for a one-directional bandwidth of $N \cdot W_\text{ici} / \max(A, B, …)$. Dividing gives the formula above.*
 
 ### More about the ReduceScatter
 

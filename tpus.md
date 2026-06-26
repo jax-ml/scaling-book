@@ -125,7 +125,11 @@ A matmul would look nearly identical except it would load into the MXU instead o
 
 {% include figure.liquid path="assets/img/tpu-bandwidth.png" class="img-fluid" %}
 
-**Chips** are arranged in **sets of 4 on a 'tray'** connected to a **CPU host via PCIe network.** This is the format most readers will be familiar with, 4 chips (8 cores, since TPU7x has two TensorCores per chip) exposed through Colab or a single TPU-VM. For inference chips like TPU v6e, we have 2 trays per host, instead of 1, but also only 1 core per chip, giving us 8 chips = 8 cores.<d-footnote>On Cloud TPU VMs, each tray is exposed as part of a separate VM, so there are once again 4 cores visible.</d-footnote>
+**A TPU chip typically (but not always) consists of two TPU cores which share memory and can be thought of as one large accelerator** with twice the FLOPs (known as a "megacore" configuration). This is true for v4, v5, and v6 TPUs (TPU v7 removes megacore and instead has a high-bandwidth link between the two cores). Older TPU chips have separate memory and are regarded as two separate accelerators (TPU v3 and older). Inference-optimized chips like the TPU v5e only have one TPU core per chip.
+
+{% include figure.liquid path="assets/img/cores.png" class="img-fluid img-small" %}
+
+**Chips** are arranged in **sets of 4 on a 'tray'** connected to a **CPU host via PCIe network.** This is the format most readers will be familiar with, 4 chips (8 cores, though usually treated as 4 logical megacores) exposed through Colab or a single TPU-VM. For inference chips like the TPU v5e, we have 2 trays per host, instead of 1, but also only 1 core per chip, giving us 8 chips = 8 cores.<d-footnote>On Cloud TPU VMs, each tray is exposed as part of a separate VM, so there are once again 4 cores visible.</d-footnote>
 
 {% include figure.liquid path="assets/img/pcie.png" class="img-fluid" %}
 
@@ -187,21 +191,27 @@ Here are some specific numbers for our chips:
 
 | Model                                      | Pod size | Host size | HBM capacity/chip | HBM BW/chip (bytes/s) | FLOPs/s/chip (bf16) | FLOPs/s/chip (int8) |
 | :----------------------------------------- | :------: | :-------: | :---------------: | :-------------------: | :-----------------: | :-----------------: |
-| <span class="nowrap-header">TPU v5e</span> |    256   |    4x2    |       16GiB       |        8.2e11         |       1.97e14       |       3.94e14       |
-| <span class="nowrap-header">TPU v5p</span> |   8960   |   2x2x1   |       96GiB       |        2.8e12         |       4.59e14       |       9.18e14       |
-| <span class="nowrap-header">TPU v6e</span> |    256   |    4x2    |       32GiB       |        1.6e12         |       9.20e14       |       1.84e15       |
-| <span class="nowrap-header">TPU7x</span>   |   9216   |   2x2x1   |      192GiB       |        7.9e12         |       2.31e15       |       4.61e15 (fp8) |
+| <span class="nowrap-header">TPU v3</span>  |  32x32   |    4x2    |       32GiB       |        9.0e11         |       1.4e14        |       1.4e14        |
+| <span class="nowrap-header">TPU v4p</span> | 16x16x16 |   2x2x1   |       32GiB       |        1.2e12         |       2.75e14       |       2.75e14       |
+| <span class="nowrap-header">TPU v5p</span> | 16x20x28 |   2x2x1   |       96GiB       |        2.8e12         |       4.59e14       |       9.18e14       |
+| <span class="nowrap-header">TPU v5e</span> |  16x16   |    4x2    |       16GiB       |        8.2e11         |       1.97e14       |       3.94e14       |
+| <span class="nowrap-header">TPU v6e</span> |  16x16   |    4x2    |       32GiB       |        1.6e12         |       9.20e14       |       1.84e15       |
+| <span class="nowrap-header">TPU7x</span>   | 4x4x576  |   2x2x1   |      192GiB       |        7.4e12         |       2.31e15       |       4.61e15 (fp8) |
 
-Host size refers to the topology of TPUs connected to a single host (e.g. TPU v5e has a single CPU host connected to 8 TPUs in a 4x2 topology). Here are interconnect figures:
+Host size refers to the topology of TPUs connected to a single host (e.g. TPU v5e has a single CPU host connected to 8 TPUs in a 4x2 topology). See the [TPU7x documentation](https://docs.cloud.google.com/tpu/docs/tpu7x) for more details on the latest generation. Here are interconnect figures:
 
-| Model       | ICI BW/link (bidi, bytes/s) |
-| :---------- | :-------------------------: |
-| **TPU v5e** |           4.0e11            |
-| **TPU v5p** |           1.2e12            |
-| **TPU v6e** |           8.0e11            |
-| **TPU7x**   |           1.2e12            |
+| Model       | ICI BW/link (one-way, bytes/s) | ICI BW/link (bidi, bytes/s) |
+| :---------- | :----------------------------: | :-------------------------: |
+| **TPU v3**  |             1.0e11             |           2.0e11            |
+| **TPU v4p** |             4.5e10             |           9.0e10            |
+| **TPU v5p** |             9.0e10             |           1.8e11            |
+| **TPU v5e** |             4.5e10             |           9.0e10            |
+| **TPU v6e** |             9.0e10             |           1.8e11            |
+| **TPU7x**   |             9.0e10             |           1.8e11            |
 
-The above chart lists the bidirectional bandwidth as it occurs more often in equations involving a full ring,<d-footnote>By bidi (bidirectional) bandwidth we mean the total bytes that can be sent along a single link in both directions, or equally, the total number of outgoing bytes from a single TPU along a particular axis, assuming we can use both links efficiently. This is true when we have a functioning ring, AKA when we have a wraparound connection on the particular axis. This occurs on inference chips when we have a full 16 axis, or on training chips when we have an axis which is a multiple of 4. We prefer to use the bidirectional bandwidth because it appears frequently in calculations involving bidirectional comms.</d-footnote>, though note that unidirectional bandwidth (half of bidirectional bandwidth) is more true to the hardware.
+We include both one-way (unidirectional) bandwidth and bidi (bidirectional) bandwidth since unidirectional bandwidth is more true to the hardware but bidirectional bandwidth occurs more often in equations involving a full ring.<d-footnote>By bidi (bidirectional) bandwidth we mean the total bytes that can be sent along a single link in both directions, or equally, the total number of outgoing bytes from a single TPU along a particular axis, assuming we can use both links efficiently. This is true when we have a functioning ring, AKA when we have a wraparound connection on the particular axis. This occurs on inference chips when we have a full 16 axis, or on training chips (v*p) when we have an axis which is a multiple of 4. We prefer to use the bidirectional bandwidth because it appears frequently in calculations involving bidirectional comms.</d-footnote>
+
+PCIe bandwidth is typically around `1.6e10` bytes / second per TPU (`3.2e10` for TPU v6e), while DCN bandwidth is typically around `6.25e9` bytes / second per TPU (`12.5e9` for TPU v6e and TPU7x, and `3.125e9` for TPU v5e).
 
 ## Worked Problems
 
@@ -250,7 +260,7 @@ $$B > \frac{9.2 \times 10^{14}}{1.6 \times 10^{10}} \simeq 57{,}500$$
 
 **Answer:** (1) The number of operations we need to perform is $2 \cdot 4096 \cdot 16384 \cdot B = 1.3 \times 10^{8} \cdot B$. So $T_{\text{math}} = (1.3 \times 10^{8} \cdot B) / 3.94 \times 10^{14}$ seconds. We need to load $16384 \cdot 4096 + 4096 \cdot B$ bytes from HBM to VMEM, and write back $16384 \cdot B$ bytes from VMEM to HBM. This means $T_{\text{comms}} = (6.7 \times 10^{7} + 2 \times 10^{4} \cdot B) / 8.2 \times 10^{11}$ seconds. Assuming as much overlap of communication and computation as possible, the whole multiplication will take approximately
 
-$$\max\{T_{\text{math}}, T_{\text{comms}}\} = \max\left\{ \frac{6.7 \times 10^{7} + 2 \times 10^{4} \cdot B}{8.2 \times 10^{11}}, \frac{1.3 \times 10^{8} \cdot B}{3.94 \times 10^{14}} \right\}$$
+$$\max\{T_{\text{math}}, T_{\text{comms}}\} = \max\left\{\frac{1.3 \times 10^{8} \cdot B}{3.94 \times 10^{14}}, \frac{6.7 \times 10^{7} + 2 \times 10^{4} \cdot B}{8.2 \times 10^{11}}\right\}$$
 
 We'll be FLOPs-bound when $\frac{6.7 \times 10^{7} + 2 \times 10^{4} \cdot B}{8.2 \times 10^{11}} < \frac{1.3 \times 10^{8} \cdot B}{3.94 \times 10^{14}}$, or equivalently, $B > 267$. This is slightly larger than the 240 number we derive in [Section 1](../roofline) because we factor in the full impact of $D$ and $F$.
 
@@ -265,7 +275,7 @@ We'll be FLOPs-bound when $\frac{6.7 \times 10^{7} + 2 \times 10^{4} \cdot B}{8.
 
 {% details Click here for the answer. %}
 
-**Answer:** In a TPU v5e we have 2D connectivity. Because we have only a `4x4` slice (with no axes of size 16), we have no wraparound connections. Thus there are two ports from which our target chip can receive data, and likewise two ports from which our source chip can send data. The amount of data we have to transfer is `2 * 8 * 128 * 8192 = 1.7e7` bytes. We can transfer from both ports simultaneously (i.e. send half the array right and half down), so we get `2 * 4.5e10 = 9e10` bytes transferred per second, which means it'll take about `1.7e7 / 9e10 = 188us` to transfer the whole array through (assuming we're bandwidth bound). In a `4x4` slice, we have six hops between chips $(0, 0)$ and $(3, 3)$, since there are no wraparound links for axes with fewer than 16 chips. Since the latency of each hop is about $1\mu s$, the first byte will arrive in about `6us` and the total transfer will take `188us`.
+**Answer:** In a TPU v5e we have 2D connectivity. Because we have only a `4x4` slice (with no axes of size 16), we have no wraparound connections. Thus there are two ports from which our target chip can receive data, and likewise two ports from which our source chip can send data. The amount of data we have to transfer is `2 * 8 * 128 * 8192 = 1.7e7` bytes. We can transfer from both ports simultaneously (i.e. send half the array right and half down), so we get `2 * 4.5e10 = 9e10` bytes transferred per second, which means it'll take about `1.7e7 / 9e10 = 188us` to transfer the whole array through (assuming we're bandwidth bound). In a `4x4` slice, we have six hops between chips $(0, 0)$ and $(3, 3)$, since there are no wraparound links for axes with fewer than 16 chips. Since the latency of each hop is about $1\mu s$, the first byte will arrive in about `6us` and the total transfer will take about `188 + 6 = 194us`, since the last byte must likewise traverse the six hops after it leaves the source (in general, the latency and bandwidth terms are additive, though here the latency is a small correction).
 
 {% enddetails %}
 

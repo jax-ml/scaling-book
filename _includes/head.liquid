@@ -22,14 +22,18 @@
 {% endif %}
 
 <!-- Fonts & Icons -->
+<!-- Roboto is self-hosted (see _sass/_fonts.scss). Preload it so it's ready at
+     first paint; with font-display: optional a late font is skipped rather than
+     swapped in, so the page never reflows because of fonts. -->
+<link
+  rel="preload"
+  as="font"
+  type="font/woff2"
+  crossorigin
+  href="{{ '/assets/fonts/roboto/roboto-latin.woff2' | relative_url }}"
+>
 <link defer rel="stylesheet" href="{{ '/assets/css/academicons.min.css' | relative_url | bust_file_cache }}">
 <link defer rel="stylesheet" href="{{ '/assets/css/scholar-icons.css' | relative_url | bust_file_cache }}">
-<link
-  defer
-  rel="stylesheet"
-  type="text/css"
-  href="{{ site.third_party_libraries.google_fonts.url.fonts }}"
->
 
 <!-- Code Syntax Highlighting -->
 <link

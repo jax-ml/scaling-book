@@ -279,7 +279,7 @@ def slugify(text: str) -> str:
 
 def process_file(filepath: Path, section_title: str, section_num: int) -> str:
     """Process a single markdown file."""
-    content = filepath.read_text()
+    content = filepath.read_text(encoding='utf-8')
 
     # Strip frontmatter
     content = strip_yaml_frontmatter(content)
@@ -350,7 +350,7 @@ def main():
 
     # Write the combined file
     output_path = base_dir / "scaling-book-combined.md"
-    output_path.write_text("\n".join(combined_content))
+    output_path.write_text("\n".join(combined_content),encoding='utf-8')
     print(f"\nWritten combined file to: {output_path}")
     print(f"Total size: {output_path.stat().st_size / 1024:.1f} KB")
 

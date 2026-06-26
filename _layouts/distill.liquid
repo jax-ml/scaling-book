@@ -79,7 +79,36 @@
     </d-title>
 
     {% if page.authors %}
-    <d-byline></d-byline>
+    <!-- Pre-render the byline server-side so it's visible at first paint. The distill JS
+         re-renders it from <d-front-matter> on DOMContentLoaded, so the markup here must
+         mirror bylineTemplate() in assets/js/distillpub/template.v2.js exactly. -->
+    {% assign byline_half = page.authors.size | plus: 1 | divided_by: 2 %}
+    <d-byline>
+      <div class="byline grid">
+        <div class="authors-affiliations grid">
+          <h3 style="grid-column: 1; grid-row: 1;">Authors</h3>
+          <h3></h3>
+          <h3>Affiliation</h3>
+          {% for author in page.authors %}
+          {% assign byline_col = forloop.index0 | divided_by: byline_half | plus: 1 %}
+          {% assign byline_row = forloop.index0 | modulo: byline_half | plus: 2 %}
+          <p class="author" style="grid-column: {{ byline_col }}; grid-row: {{ byline_row }};">
+            {% if author.url %}<a class="name" href="{{ author.url }}">{{ author.name }}</a>{% else %}<span class="name">{{ author.name }}</span>{% endif %}
+          </p>
+          <p class="affiliation" style="grid-column: 3; grid-row: {{ byline_row }};">
+            {% if author.affiliations.url %}<a class="affiliation" href="{{ author.affiliations.url }}">{{ author.affiliations.name }}</a>{% else %}<span class="affiliation">{{ author.affiliations.name }}</span>{% endif %}
+          </p>
+          {% endfor %}
+        </div>
+        <div>
+          <h3>Published</h3>
+          <!-- Match the AP-style month abbreviations in template.v2.js's `months` array. -->
+          {% assign byline_months = "Jan.,Feb.,March,April,May,June,July,Aug.,Sept.,Oct.,Nov.,Dec." | split: "," %}
+          {% assign byline_month_idx = page.date | date: '%-m' | minus: 1 %}
+          <p>{{ byline_months[byline_month_idx] }} {{ page.date | date: '%-d, %Y' }}</p>
+        </div>
+      </div>
+    </d-byline>
     {% endif %}
 
     <d-article>

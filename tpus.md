@@ -94,7 +94,7 @@ _styles: >
 
 You can think of the TensorCore as basically just being a really good matrix multiplication machine, but it has a few other functions worth noting. The TensorCore has three key units:
 
-* The **MXU** (Matrix Multiply Unit) is the core of the TensorCore. It performs one `bf16[8,K] @ bf16[K,N] -> f32[8,N]` matrix multiply every `n` cycles using a systolic array (see <a href="#appendix-b-how-does-a-systolic-array-work">Appendix B</a> for details). For TPU7x, `K = N = 256` and `n = 4`.
+* The **MXU** (Matrix Multiply Unit) is the core of the TensorCore. On TPU7x, it performs one `bf16[8,256] @ bf16[256,256] -> f32[8,256]` matrix multiply every `4` cycles using a systolic array (see <a href="#appendix-b-how-does-a-systolic-array-work">Appendix B</a> for details).
   * This is about `5.8e14` bf16 FLOPs/s per MXU at 2.2GHz on TPU7x. Each TPU7x chip has 2 TensorCores, and each TensorCore has 2 MXUs, so the total bf16 FLOPs/s for TPU7x is around `2.3e15`.
   * TPUs also support lower precision matmuls with higher throughput (e.g. each TPU7x chip can do `4.6e15` fp8 OPs/s).
 
@@ -119,7 +119,7 @@ Here's an example of how you might perform an elementwise product from HBM:
 
 A matmul would look nearly identical except it would load into the MXU instead of the VPU/Vector unit, and the loads and stores would occur in a different order, since the same weight chunk is used for multiple chunks of activations. You can see chunks of data streaming into VMEM, then into the VREGs (vector registers), then into the Vector Unit, then back into VMEM and HBM. As we're about to see, if the load from HBM to VMEM is slower than the FLOPs in the Vector Unit (or MXU), we become "bandwidth bound" since we're starving the VPU or MXU of work.
 
-<p markdown=1 class="takeaway">**Key takeaway:** TPUs are very simple. They load weights from HBM into VMEM, then from VMEM into a systolic array which can perform around 2.3 quadrillion multiply-adds per second. The HBM $\leftrightarrow$ VMEM and VMEM $\leftrightarrow$ systolic array bandwidths set fundamental limits on what computations TPUs can do efficiently.</p>
+<p markdown=1 class="takeaway">**Key takeaway:** TPUs are very simple. They load weights from HBM into VMEM, then from VMEM into a systolic array which can perform around 580 trillion multiply-adds per second. The HBM $\leftrightarrow$ VMEM and VMEM $\leftrightarrow$ systolic array bandwidths set fundamental limits on what computations TPUs can do efficiently.</p>
 
 **VMEM and arithmetic intensity:** VMEM is much smaller than HBM but it has a much higher bandwidth to the MXU. As we saw in [Section 1](../roofline), this means if an algorithm can fit all its inputs/outputs in VMEM, it's much less likely to hit communication bottlenecks. This is particularly helpful when a computation has poor arithmetic intensity: VMEM bandwidth is ~7x higher than HBM bandwidth for TPU7x, which means an MXU operation reading from/writing to VMEM requires a ~7x lower arithmetic intensity than an operation using HBM to achieve peak FLOPs utilization. That means if we can fit our weights into VMEM instead of HBM, our matrix multiplications can be FLOPs bound at much smaller batch sizes. And it means algorithms that fundamentally have a lower arithmetic intensity can still be efficient. VMEM is just so small this is often a challenge.<d-footnote>We sometimes talk about VMEM prefetching, which refers to loading weights ahead of time in VMEM so we can mask the cost of loading for our matmuls. For instance, in a normal Transformer we can sometimes load our big feed-forward weights into VMEM during attention, which can hide the cost of the weight load if we're memory bandwidth bound. This requires our weights to be small enough or sharded enough to fit a single layer into VMEM with space to spare.</d-footnote>
 
@@ -137,7 +137,7 @@ A matmul would look nearly identical except it would load into the MXU instead o
 
 ## TPU Networking
 
-**Chips are connected to each other through the ICI network in a Pod**. In inference-optimzed Trillium (TPU v6e), ICI ("inter-chip interconnects") connects each chip to its 4 nearest neighbors (with edge links to form a 2D torus). On the other hand, each chip in training-optimized TPU7x is connected to the nearest 6 neighbors (forming a 3D torus). Note these connections do **not** go through their hosts, they are direct links between chips.
+**Chips are connected to each other through the ICI network in a Pod**. In Trillium (TPU v6e), ICI ("inter-chip interconnects") connects each chip to its 4 nearest neighbors (with edge links to form a 2D torus), which is typical for inference-optimized chips. On the other hand, each chip in TPU7x is connected to the nearest 6 neighbors (forming a 3D torus), providing more ICI bandwidth for training workloads. Note these connections do **not** go through their hosts, they are direct links between chips.
 
 {% include figure.liquid path="assets/img/ici-wraparound.png" class="img-fluid img-small" %}
 
@@ -147,7 +147,7 @@ The toroidal structure reduces the maximum distance between any two nodes from $
 
 {% include figure.liquid path="assets/img/tpu-rack.png" class="img-fluid" %}
 
-Smaller topologies (e.g. `2x2x1`, `2x2x2`) can also be requested, albeit with no wraparounds. This is an important caveat, since it typically doubles the time of most communication. Any multiple of a full cube (e.g. `4x4x4` or `4x4x8`) will have wraparounds provided by the optical switches.<d-footnote>Note that a `2x2x4` won't have any wraparounds since they are provided by the optical switches which are only available on a full cube.</d-footnote>
+Smaller topologies (e.g. `2x2x1`, `2x2x2`) can also be requested, albeit with no wraparounds. This is an important caveat, since it typically doubles the time of most communication. Any multiple of a full cube (e.g. `4x4x4` or `4x4x8`) will have wraparounds provided by the optical switches.<d-footnote>Note that a `2x2x4` won't have any wraparounds since they are provided by the optical switches which are only available on a full cube. A TPU v6e 8x16 _will_ have a wraparound on the longer axis, however, since it doesn't use reconfigurable optical networking.</d-footnote>
 
 {% include figure.liquid path="assets/img/subslices.png" class="img-fluid" %}
 

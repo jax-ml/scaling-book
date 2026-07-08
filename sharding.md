@@ -599,7 +599,7 @@ We have a wraparound link on all axes because we have a full `4x4x4` cube, so we
 
 3. The cost of an AllReduce is twice that of an AllGather. Each shard has size $2BD / (X * Y)$, so the cost is about $4BD / (X * Y * W)$, or roughly `4 * 1024 * 4096 / (16 * 9e10) = 11.6us`.
 
-*Fun fact:* parts (1) and (2) aren't actually optimal, because the array is also replicated along the unused Z axis, and we can exploit those idle links: we can first re-shard $[B_X, D_Y] \to [B_{XZ}, D_Y]$ for free (each device just drops part of its shard) and then perform $\text{AllGather}_{XZ}$ (or $\text{AllGather}_{XYZ}$), reaching the same final state while gathering over more axes. This cuts part (1) to 11.5us and part (2) to 31us — in practice you'd get this by just sharding over more axes up front, which is one reason to shard arrays as finely as possible.
+*Fun fact:* parts (1) and (2) aren't actually optimal, because the array is also replicated along the unused Z axis, and we can exploit those idle links: we can first re-shard $[B_X, D_Y] \to [B_{XZ}, D_Y]$ for free (each device just drops part of its shard) and then perform $$\text{AllGather}_{XZ}$$ (or $$\text{AllGather}_{XYZ}$$), reaching the same final state while gathering over more axes. This cuts part (1) to 11.5us and part (2) to 31us — in practice you'd get this by just sharding over more axes up front, which is one reason to shard arrays as finely as possible.
 
 {% enddetails %}
 

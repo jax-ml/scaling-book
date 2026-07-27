@@ -121,6 +121,7 @@ There is a bunch of related writing, including the following:
 - [**Stanford CS336 Slides and Videos**](https://stanford-cs336.github.io/spring2025/index.html#coursework): a fantastic Stanford course covering many details of LLM training and serving, with some useful exercises. Assignments 1 and 2 are particularly relevant.
 - [**Stas Bekman's ML Engineering Handbook**](https://github.com/stas00/ml-engineering): a highly practical guide to ML infrastructure, covering topics not addressed in this book like how to negotiate with cloud providers, cluster management, and empirical measurements of GPU throughput.
 - [**ezyang's blog**](https://blog.ezyang.com/2026/01/computing-sharding-with-einsum/): a PyTorch lead's blog on all things sharding + PyTorch, including a [guide to PyTorch internals](https://blog.ezyang.com/2019/05/pytorch-internals/) and a [writeup of sharded matrix multiplication](https://blog.ezyang.com/2026/01/computing-sharding-with-einsum/). Lots of other good things here.
+- [**The Anatomy of Collective Communication**](https://www.aleksagordic.com/blog/collective-operations): a nice walkthrough of GPU and TPU collectives in the spirit of this book. Has a better writeup of N-D and GPU collectives than this book.
 
 There remains a lot of room for comprehensive writing in this area, so we hope this manuscript encourages more of it! We also believe that this is a fruitful area to study and research. In many cases, it can be done even without having many hardware accelerators on hand.
 

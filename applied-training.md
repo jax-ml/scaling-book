@@ -152,7 +152,7 @@ Let's look at FLOPs now! *Remember the general rules for training from [Section 
 
 The total here is about 21.6TB. You notice that gradient checkpointing strongly dominates the memory picture, even with a very conservative checkpointing scheme. We could technically go to 1 checkpoint per layer, or do microbatching, but this is a reasonable picture. With these assumptions, since each TPU v5p has 96GB of HBM, we need `21.6e12 / 96e9 = 225` TPUs. That's not very much actually!
 
-*Why wouldn't we do this?* Well, because it would take us `44 days * 8960 / 225 = 1752 days` to train. That's nearly four years. **That's a lot.** Still, this makes it clear that we're using these large clusters not because we're bound by memory but rather because we need the extra FLOPs.
+*Why wouldn't we do this?* Well, because it would take us `44 days * 8960 / 225 = 1752 days` to train. That's nearly five years. **That's a lot.** Still, this makes it clear that we're using these large clusters not because we're bound by memory but rather because we need the extra FLOPs.
 
 {% enddetails %}
 

@@ -341,7 +341,7 @@ Following the rule above, we have I and J as contracting dimensions and K, L, M,
 
 {% enddetails %}
 
-**Question 4:** What is the arithmetic intensity of self-attention (ignoring the Q/K/V/O projections)? *Give the answer as a function of the Q and KV lengths T and S.* At what context length is attention FLOPs-bound? Given the HBM bandwidth of our TPUs, plot the effective relative cost of attention to the FFW block as the context length grows.
+**Question 4:** What is the arithmetic intensity of grouped multi-query attention (ignoring the Q/K/V/O projections)? *Give the answer as a function of the Q and KV sequence lengths T and S and the multi-query factor G.* At what context length is attention FLOPs-bound? Given the HBM bandwidth of our TPUs, plot the effective relative cost of attention to the FFW block as the context length grows. *Hint: assume we're using an efficient attention implementation that doesn't do any unnecessary reads/writes. Consider both the limits where T = S and T << S.*
 
 {% details Click here for the answer. %}
 

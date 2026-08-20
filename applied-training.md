@@ -80,7 +80,7 @@ _Our goal in this section is to apply results from the previous section to a ver
 
 ### What does LLaMA 3 look like?
 
-The LLaMA-3 model family<d-cite key="llama3"></d-cite> includes 3 main models: LLaMA 3 8B, 70B, and 405B. We'll mostly focus on 70B, and leave 8B and 405B for you to explore in the problem section at the end. Here's the architecture for LLaMA 3-70B, taken from the LLaMA [HuggingFace page](https://huggingface.co/meta-llama/Meta-Llama-3-70B/blob/main/config.json).
+The LLaMA-3 model family<d-cite key="llama3"></d-cite> includes 3 main models: LLaMA 3 8B, 70B, and 405B. We'll mostly focus on 70B, and leave 8B and 405B for you to explore in the problem section at the end. Here's the architecture for LLaMA 3-70B, taken from the LLaMA [HuggingFace page](https://huggingface.co/NousResearch/Meta-Llama-3-70B/blob/main/config.json).
 
 | **hyperparam**              | **value** |
 | --------------------------- | --------- |
@@ -139,20 +139,20 @@ Let's look at FLOPs now! *Remember the general rules for training from [Section 
 
 {% enddetails %}
 
-**Question:** LLaMA 3-70B was pretrained with a batch size of about 4M tokens. How many TPUs do we need at minimum to train with this batch size? _You can assume bfloat16 parameters and float32 optimizer state, and that you checkpoint gradients 4 times per layer._
+**Question:** LLaMA 3-70B was pretrained with a batch size of about 4M tokens. How many TPUs do we need at minimum to train with this batch size? _You can assume bfloat16 parameters and float32 optimizer state, and that you checkpoint activations 2 times per layer (at the beginning of the layer and after attention)._
 
 {% details Click here for the answer, once you've thought about it! %}
 
-**Answer**: This question is primarily asking about memory usage, since that's the only strict constraint on available compute. During training, we have three primary uses of HBM: model parameters, optimizer state, and gradient checkpoints. If we assume bfloat16 weights, float32 optimizer state, and a _very_ conservative gradient checkpointing scheme (4 times per layer), we have:
+**Answer**: This question is primarily asking about memory usage, since that's the only strict constraint on available compute. During training, we have three primary uses of HBM: model parameters, optimizer state, and activation checkpoints. If we assume bfloat16 weights, float32 optimizer state, and a _very_ conservative activation checkpointing scheme (2 times per layer), we have:
 
 | **Params** | 2 * 70GB | ~140GB |
 | **Optimizer State** | 8 * 70GB | ~560GB |
-| **Gradient Checkpoints** | 2 * 8192 * 4e6 * 4 * 80 | ~20.9TB |
-| **Total**                |                         | ~21.6TB |
+| **Activation Checkpoints** | 2 * 8192 * 4e6 * 2 * 80 | ~10.5TB |
+| **Total**                |                         | ~11.2TB |
 
-The total here is about 21.6TB. You notice that gradient checkpointing strongly dominates the memory picture, even with a very conservative checkpointing scheme. We could technically go to 1 checkpoint per layer, or do microbatching, but this is a reasonable picture. With these assumptions, since each TPU v5p has 96GB of HBM, we need `21.6e12 / 96e9 = 225` TPUs. That's not very much actually!
+The total here is about 11.2TB. You notice that activation checkpointing strongly dominates the memory picture, even with a very conservative checkpointing scheme. We could technically go to 1 checkpoint per layer, or do microbatching, but this is a reasonable picture. With these assumptions, since each TPU v5p has 96GB of HBM, we need `11.2e12 / 96e9 = 117` TPUs. That's not very much actually!
 
-*Why wouldn't we do this?* Well, because it would take us `44 days * 8960 / 225 = 1752 days` to train. That's nearly four years. **That's a lot.** Still, this makes it clear that we're using these large clusters not because we're bound by memory but rather because we need the extra FLOPs.
+*Why wouldn't we do this?* Well, because it would take us `44 days * 8960 / 117 = 3369 days` to train. That's nearly ten years. **That's a lot.** Still, this makes it clear that we're using these large clusters not because we're bound by memory but rather because we need the extra FLOPs. Also, since we're checkpointing so infrequently, we're doing close to 8ND FLOPs instead of 6ND.
 
 {% enddetails %}
 
@@ -160,7 +160,7 @@ The total here is about 21.6TB. You notice that gradient checkpointing strongly 
 
 {% details Click here for the answer, once you've thought about it! %}
 
-**Answer**: Our total memory is still about 21.6TB, so per-chip we'll be using about 2.4GB per chip, which is basically nothing. If we did much more aggressive checkpointing, e.g. 12 checkpoints per layer, we'd still only be at 8GB per chip. We're nowhere near being memory bound during training at these scales.
+**Answer**: Our total memory is still about 11.2TB, so per-chip we'll be using about 1.3GB per chip, which is basically nothing. If we did much more aggressive checkpointing, e.g. 12 checkpoints per layer, we'd still only be at 8GB per chip. We're nowhere near being memory bound during training at these scales.
 
 {% enddetails %}
 
@@ -206,7 +206,7 @@ Rounding to a reasonable multiple of 2, that gives us roughly 2048-way FSDP and 
 
 **Question 2 [LLaMA 405B]:**
 
-(a) Using the LLaMA 3-405B [config](https://huggingface.co/meta-llama/Llama-3.1-405B/blob/main/config.json) (a gated model, so you may need to log in and request access to view it), write a table with all the key hyperparameters as above. How many total parameters does this model have? How many FLOPs per training step? How many FLOPs do we perform if we train for 15T tokens?
+(a) Using the LLaMA 3-405B [config](https://huggingface.co/NousResearch/Hermes-3-Llama-3.1-405B/blob/main/config.json) (a gated model, so you may need to log in and request access to view it), write a table with all the key hyperparameters as above. How many total parameters does this model have? How many FLOPs per training step? How many FLOPs do we perform if we train for 15T tokens?
 
 (b) Assume we want to train on 8 TPU v5p pods. What parallelism scheme would we use? How long would training take? Would we be compute or comms bound?
 

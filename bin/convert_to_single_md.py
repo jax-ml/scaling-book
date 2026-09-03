@@ -66,12 +66,12 @@ def convert_figure_includes(content: str) -> str:
             return match.group(0)  # Return original if no path
         path = path_match.group(1)
 
-        # Extract caption if present - handle captions that may span multiple lines
-        caption_match = re.search(r'caption="(.*?)"(?:\s*%\}|\s+\w+)', attrs, re.DOTALL)
-        if not caption_match:
-            # Try simpler pattern
-            caption_match = re.search(r'caption="([^"]*)"', attrs, re.DOTALL)
+        # Extract caption if present. Captions often contain escaped quotes
+        # inside HTML attributes, so parse a quoted string rather than stopping
+        # at the first quote.
+        caption_match = re.search(r'caption="((?:\\.|[^"\\])*)"', attrs, re.DOTALL)
         caption = caption_match.group(1) if caption_match else ""
+        caption = caption.replace(r'\"', '"')
 
         # Clean up caption - remove HTML tags and normalize whitespace
         caption = re.sub(r'<[^>]+>', '', caption)
@@ -245,9 +245,40 @@ def convert_inline_math(content: str) -> str:
     return '\n'.join(result)
 
 
+def convert_markdown_callout_paragraphs(content: str) -> str:
+    """Preserve semantic Markdown paragraphs as blockquotes for PDF callouts."""
+    callout_classes = {"announce", "takeaway", "note", "tip"}
+    paragraph_pattern = re.compile(r'<p\b([^>]*)>(.*?)</p>', re.DOTALL | re.IGNORECASE)
+
+    def replace_paragraph(match: re.Match[str]) -> str:
+        attrs = match.group(1)
+        body = match.group(2).strip()
+        markdown_attr = re.search(r'\bmarkdown\s*=\s*["\']?1["\']?', attrs, re.IGNORECASE)
+        class_attr = re.search(r'\bclass\s*=\s*["\']([^"\']+)["\']', attrs, re.IGNORECASE)
+
+        if not markdown_attr or not class_attr:
+            return match.group(0)
+
+        classes = set(class_attr.group(1).split())
+        if not classes.intersection(callout_classes):
+            return match.group(0)
+
+        quoted_body = "\n".join(
+            f"> {line}" if line.strip() else ">"
+            for line in body.splitlines()
+        )
+        return f"\n\n{quoted_body}\n\n"
+
+    return paragraph_pattern.sub(replace_paragraph, content)
+
+
 def clean_html_elements(content: str) -> str:
     """Clean up custom HTML elements."""
-    # Convert <p markdown=1 class="takeaway">**...**</p> to just the content
+    # Preserve semantic paragraphs as blockquotes so the PDF can style them as
+    # callouts while keeping the actual book text unchanged.
+    content = convert_markdown_callout_paragraphs(content)
+
+    # Convert remaining <p markdown=1> paragraphs to just their contents.
     content = re.sub(r'<p\s+markdown=1[^>]*>', '', content)
     content = re.sub(r'</p>', '', content)
 
@@ -258,9 +289,11 @@ def clean_html_elements(content: str) -> str:
     # Remove <sup>*</sup> markers
     content = re.sub(r'<sup>\*</sup>', '*', content)
 
-    # Clean up <b markdown=1 style=...> tags
-    content = re.sub(r'<b\s+markdown=1[^>]*>', '**', content)
+    # Clean up emphasis tags with styling.
+    content = re.sub(r'<b\b[^>]*>', '**', content)
     content = re.sub(r'</b>', '**', content)
+    content = re.sub(r'<i\b[^>]*>', '*', content)
+    content = re.sub(r'</i>', '*', content)
 
     # Clean up <span> tags with styling
     content = re.sub(r'<span[^>]*>', '', content)

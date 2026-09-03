@@ -14,3 +14,6 @@ vendor
 *.swp
 .jj
 *.docx
+scaling-book-combined.md
+scaling-book.pdf
+scaling-book.typ

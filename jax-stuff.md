@@ -374,7 +374,7 @@ Here are some random JAX-related problems. I'll add some more later. For all of 
 
 {% details Click here for the answer. %}
 
-Part 1: Here is a solution to part 1. Note the fairly complex reshapes we have to do for the `jax.jit` solution.
+**Part 1:** Here is a solution to part 1. Note the fairly complex reshapes we have to do for the `jax.jit` solution.
 
 ```py
 import numpy as np
@@ -407,7 +407,7 @@ y2 = average_jit(x)
 np.testing.assert_array_equal(y1, y2)
 ```
 
-Part 2: Here is a similar solution to Part 2.
+**Part 2:** Here is a similar solution to Part 2. The `shard_map` version is the one you were asked for, but a `jax.jit` version is included for comparison.
 
 ```py
 import numpy as np
@@ -423,7 +423,7 @@ mesh = jax.make_mesh((4, 2), ('X','Y'), (Auto, Auto))
 
 def shift_shmap(x, shift: int):
   shmapped = jax.shard_map(
-      lambda x: jnp.roll(x, shift, axis=0),
+      lambda x: jnp.roll(x, shift, axis=0) - x,
       mesh=mesh,
       in_specs=jax.P('X','Y'), out_specs=jax.P('X','Y')
   )
@@ -433,7 +433,7 @@ def shift_shmap(x, shift: int):
 def shift_jit(x, shift: int):
   X, Y = mesh.axis_sizes
   reshaped = x.reshape(X, x.shape[0] // X, -1)
-  return jnp.roll(reshaped, shift, axis=1).reshape(x.shape[0], x.shape[1])
+  return (jnp.roll(reshaped, shift, axis=1) - reshaped).reshape(x.shape[0], x.shape[1])
 
 x = jnp.arange(8 * 64 * 8, dtype=jnp.float32).reshape(8 * 64, 8)
 x = jax.device_put(x, jax.NamedSharding(mesh, jax.P('X','Y')))
@@ -448,7 +448,7 @@ np.testing.assert_array_equal(y1, y2)
 
 **Question 2:** Here we'll make a basic "mixture of experts" model together. Let **W**: float32[E<sub>X</sub>, D, F] be a set of E "expert" matrices. Let **A**: float32[S<sub>X</sub>, D] (our activations) and let **B**: int32[S<sub>X</sub>] be a set of "routing assignments" where B[i] is an integer in the range `[0, E)` telling us which matrix we want to process that activation. We want to write a function in JAX that returns `Out[i] = A[i] @ W[B[i]]`.
 
-1. Let's start by ignoring sharding altogether. Make all of these tensors small enough so they fit in one device. Write a local implementation of this function. *Make sure you don't materialize an array of shape `[S, D, F]`! Hint: try sorting the tokens into a new buffer of shape `[E, S, D]` with some attention to masking (why do we need the second dimension to have size S?).*
+1. Let's start by ignoring sharding altogether. Make all of these tensors small enough so they fit in one device. Write a local implementation of this function. *Make sure you don't materialize an array of shape `[S, D, F]`! Hint: there are a few ways to do this. The simplest is to loop over the experts, multiply all of **A** by `W[e]`, and mask out the tokens not routed to expert `e`. Alternatively, you can sort the tokens by expert into a padded buffer of shape `[E, S, D]` and do a single batched matmul, masking out the padding (why does the second dimension need to have size S?). `jax.lax.ragged_dot` does the sorted version without the padding.*
 
 2. If you just `jax.jit` the above method, something will happen. Profile this and see what communication it decided to do. How long does it take?
 
@@ -462,7 +462,7 @@ np.testing.assert_array_equal(y1, y2)
 
 {% details Click here for the (partial) answer. %}
 
-1/2. For part (1), you have a lot of choices. Here's one option that just iterates over the experts with masking.
+**Part 1:** You have a lot of choices here. Here's the simplest option, which just iterates over the experts with masking and never sorts the tokens:
 
 ```py
 def moe_local(W: jnp.ndarray, A: jnp.ndarray, B: jnp.ndarray) -> jnp.ndarray:
@@ -482,20 +482,21 @@ def moe_local(W: jnp.ndarray, A: jnp.ndarray, B: jnp.ndarray) -> jnp.ndarray:
     return output
 ```
 
-You can also use `jax.lax.ragged_dot` which will do something similar but more efficiently.
+This wastes compute, since every expert processes every token. A more efficient option is to sort the tokens by expert and then use `jax.lax.ragged_dot`, which takes the sorted activations along with the number of tokens per expert and does the matmul without any padding or masking.
 
-3. I'm only going to sketch the pseudocode here (if you have a clean solution feel free to add it):
+**Part 3:** I'm only going to sketch the pseudocode here (if you have a clean solution feel free to add it):
 
 ```py
 chunk_size = 128
 def matmul(W, x, B):
   i = 0
+  outs = []
   x = # sort x according to assignments
   while (chunk := x[i:i+chunk_size]).any():
      chunk = all_to_all(chunk)
-     out = matmul_local(W, chunk)
+     outs.append(matmul_local(W, chunk))
      i += chunk_size
-  return concat(out)
+  return concat(outs)
 ```
 
 The basic idea is to iterate over chunks of the array, sort them and do an all_to_all, then do the local FLOPs.
@@ -504,11 +505,11 @@ The basic idea is to iterate over chunks of the array, sort them and do an all_t
 
 **Question 3:** The collective matmul example above is actually super relevant for real LLMs. Let's tweak the example to do the full Transformer stack.
 
-1. As an exercise, let's start by implementing an AllReduce collective matmul, i.e. A[B<sub>X</sub>, D<sub>Y</sub>] \*<sub>D</sub> W[D<sub>Y</sub>, F] -> Out[B<sub>X</sub>, F]. Note that the output isn't replicated. The naive algorithm is discussed above, basically just a local matmul followed by an AllReduce. Try to make a comms overlapped "collective" version of this operation. *Hint: tile over the output dimension and feel free to use `jax.lax.psum` (aka AllReduce).* *Note: due to the way XLA handles this, it may not actually be faster than the baseline.*
+1. As an exercise, let's start by implementing an AllReduce collective matmul, i.e. A[B<sub>X</sub>, D<sub>Y</sub>] \*<sub>D</sub> W[D<sub>Y</sub>, F] -> Out[B<sub>X</sub>, F]. Note that the output is sharded only along X, i.e. it is replicated across Y. The naive algorithm is discussed above, basically just a local matmul followed by an AllReduce. Try to make a comms overlapped "collective" version of this operation. *Hint: tile over the output dimension and feel free to use `jax.lax.psum` (aka AllReduce).* *Note: due to the way XLA handles this, it may not actually be faster than the baseline.*
 
 2. The complement to the AllReduce collective matmul above is a ReduceScatter collective matmul, as in Tmp[B<sub>X</sub>, F<sub>Y</sub>] \*<sub>F</sub> W2[F<sub>Y</sub>, D] -> Out[B<sub>X</sub>, D<sub>Y</sub>]. This occurs in the down-projection matrix in a Transformer. Implement a collective, overlapped version of this in JAX. Be careful about passing only the minimal amount of data you need. *Hint: try permuting the result as you accumulate it.*
 
-3. Put these two together into an end-to-end Transformer block that performs In[B<sub>X</sub>, D<sub>Y</sub>] \*<sub>D</sub> W<sub>in</sub>[D, F<sub>Y</sub>] \*<sub>F</sub> W<sub>out</sub>[F<sub>Y</sub>, D] -> Out[B<sub>X</sub>, D<sub>Y</sub>] with overlapped communication.<d-footnote>As before, we can't do $W_{in} \cdot W_{out}$ first because of a non-linearity we've omitted here.</d-footnote> How much faster is this than a `jax.jit` implementation?
+3. Put the AllGather collective matmul from the main text together with the ReduceScatter collective matmul from (2) into an end-to-end Transformer block that performs In[B<sub>X</sub>, D<sub>Y</sub>] \*<sub>D</sub> W<sub>in</sub>[D, F<sub>Y</sub>] \*<sub>F</sub> W<sub>out</sub>[F<sub>Y</sub>, D] -> Out[B<sub>X</sub>, D<sub>Y</sub>] with overlapped communication.<d-footnote>As before, we can't do $W_{in} \cdot W_{out}$ first because of a non-linearity we've omitted here.</d-footnote> How much faster is this than a `jax.jit` implementation?
 
 **Question 4:** All of the collective matmuls implemented above are unidirectional: they only permute in one direction. Rewrite the collective AllReduce matmul and the collective ReduceScatter matmuls to use bidirectional communication. How much faster are these?
 

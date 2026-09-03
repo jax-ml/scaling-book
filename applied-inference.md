@@ -367,4 +367,16 @@ Here are a few worked problems. Some of these repeat things that are worked abov
 
 **Question 3:** How would you serve LLaMA 3-405B on TPU v5e? Assume int8 weights and bfloat16 FLOPs. Let's say we have a firm limit of 15ms / token, what's the highest throughput configuration we could achieve? What is the theoretical minimum step time?
 
+**Question 4:** The best way to learn about LLMs is to implement one from scratch. Building the full training pipeline is annoying and expensive, but turning trained weights you can [download from HuggingFace](https://huggingface.co/meta-llama/Llama-3.1-8B-Instruct/) into a working inference implementation is extremely instructive. Roughly speaking, you should try to do the following:
+
+1. Download LLaMA 3 8B weights and load them in Colab. Visualize the weights (I like [TreeScope](https://github.com/google-deepmind/treescope) for this) and see if you can identify each tensor. Count the # of parameters. Does it match what you expect? How many are in the MLP vs. attention?
+
+2. Implement the full forward pass of the model. You don't need to worry about prefill/decode or anything fancy. Just get to the point where you can feed in a sequence and get plausible next-token probabilities out. You should be able to feed a prompt in, get probabilities out, pick the highest probability one, and repeat. This is slow but functional sampling. Try to only use the LLaMA-3 paper as a reference, but the [`jax-ml/jax-llm-examples/llama3`](https://github.com/jax-ml/jax-llm-examples/tree/main/llama3) repo can be a good reference for details (be careful of positional embeddings and causal masking). Your goal is to get coherent tokens out of the model. *You can run this all on a single TPU if you can get more than 16GiB of HBM.*
+
+3. Now it's time to make this faster. Implement KV caching, where you can save the key/value activations from a forward pass and attend to them in a subsequent one. This will make your sampling loop much faster.
+
+4. Implement separate prefill and decode servers. You can do these on different sets of chips. Prefill handles just a single prompt at once, then sends it to a batched decode server that handles batches of tokens.
+
+5. Implement Flash Attention in Pallas. This will make attention much more efficient. *I think it's good to try and do this without a reference.*
+
 <h3 markdown=1 class="next-section">That's all for Part 8! For Part 9, with a deep dive into XLA and TPU profiling, click [here](../profiling).</h3>

@@ -178,7 +178,7 @@ $T_\text{math}$ is clearly half of what it was before, since each TPU is doing h
 
 $$T_\text{math} = \frac{2BDF}{2 \cdot \text{Accelerator FLOPs/s}} = \frac{BDF}{1.97e14}$$
 
-Now what about $T_\text{comms}$? This now refers to the communication time between chips! This is just the total bytes sent divided by the network bandwidth, i.e.
+Now what about $T_\text{comms}$? This now refers to the communication time between chips! This is just the total bytes sent divided by the network bandwidth, i.e.<d-footnote>Because inter-chip links are full-duplex (sending and receiving $2BF$ bytes simultaneously over separate physical channels), the wall-clock time is bounded by a single chip transmitting $2BF$, rather than a half-duplex total of $4BF$.</d-footnote>
 
 $$T_\text{comms} = \frac{2BF}{\text{Network Bandwidth}} = \frac{2BF}{4.5e10}$$
 

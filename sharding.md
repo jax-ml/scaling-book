@@ -167,7 +167,7 @@ import jax.numpy as jnp
 # The Auto axis type tells JAX to let the XLA compiler infer intermediate shardings.
 assert len(jax.devices()) == 8
 Auto = jax.sharding.AxisType.Auto
-mesh = jax.make_mesh(axis_shapes=(4, 2), axis_names=('X', 'Y'), axis_types=(Auto, Auto))
+mesh = jax.make_mesh(axis_sizes=(4, 2), axis_names=('X', 'Y'), axis_types=(Auto, Auto))
 
 # A little utility function to help define our sharding. A PartitionSpec is our
 # sharding (a mapping from axes to names).

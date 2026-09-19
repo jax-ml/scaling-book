@@ -113,7 +113,7 @@ jax.config.update("jax_num_cpu_devices", 8)
 
 # This creates a 2D 4x2 mesh with axis names X and Y that JAX uses by default.
 # We explicitly tell JAX to let the XLA compiler infer sharding along these axes.
-mesh = jax.make_mesh(axis_shapes=(4, 2), axis_names=('X', 'Y'), axis_types=(Auto, Auto))
+mesh = jax.make_mesh(axis_sizes=(4, 2), axis_names=('X', 'Y'), axis_types=(Auto, Auto))
 jax.set_mesh(mesh)
 
 # We create a matrix W and input activations In sharded across our devices.
@@ -183,7 +183,7 @@ import numpy as np
 Explicit = jax.sharding.AxisType.Explicit
 
 # Running on a TPU v5e 2x2. This assigns names to the two physical axes of the hardware.
-mesh = jax.make_mesh(axis_shapes=(2, 2), axis_names=('X', 'Y'), axis_types=(Explicit, Explicit))
+mesh = jax.make_mesh(axis_sizes=(2, 2), axis_names=('X', 'Y'), axis_types=(Explicit, Explicit))
 
 # This tells JAX to use this mesh for all operations, so you can just specify the PartitionSpec P.
 jax.set_mesh(mesh)
@@ -295,7 +295,7 @@ Explicit = jax.sharding.AxisType.Explicit
 # This is intended to run on a TPU v5e-8 runtime. If you can't get this,
 # try setting jax.config.update('jax_num_cpu_devices', 8).
 #
-mesh = jax.make_mesh(axis_shapes=(2, 4), axis_names=('X', 'Y'), axis_types=(Explicit, Explicit))
+mesh = jax.make_mesh(axis_sizes=(2, 4), axis_names=('X', 'Y'), axis_types=(Explicit, Explicit))
 jax.set_mesh(mesh)
 
 B, D, F = 1024, 2048, 8192

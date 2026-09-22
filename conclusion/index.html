@@ -1,0 +1,218 @@
+<!DOCTYPE html> <html> <head> <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"> <meta charset="utf-8"> <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no"> <meta http-equiv="X-UA-Compatible" content="IE=edge"> <title> Conclusions and Further Reading | How To Scale Your Model </title> <meta name="author" content=" "> <meta name="description" content="Thank you for reading! Here we'll include a few more references for further study."> <meta name="keywords" content="scaling, jax, llms, transformers, tpus, google, deepmind, parallelism, pallas"> <meta property="og:site_name" content="How To Scale Your Model"> <meta property="og:type" content="website"> <meta property="og:title" content="Conclusions and Further Reading"> <meta property="og:url" content="https://jax-ml.github.io/scaling-book/conclusion/"> <meta property="og:description" content="Thank you for reading! Here we'll include a few more references for further study."> <meta property="og:image" content="https://jax-ml.github.io/scaling-book/assets/img/dragon.png"> <meta property="og:locale" content="en"> <meta name="twitter:card" content="summary_large_image"> <meta name="twitter:title" content="Conclusions and Further Reading"> <meta name="twitter:description" content="Thank you for reading! Here we'll include a few more references for further study."> <meta name="twitter:image" content="https://jax-ml.github.io/scaling-book/assets/img/dragon.png"> <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "url": "https://jax-ml.github.io/scaling-book/conclusion/",
+        "name": "How To Scale Your Model",
+        "headline": "Conclusions and Further Reading",
+        
+        "description": "Thank you for reading! Here we'll include a few more references for further study."
+    }
+  </script> <link rel="stylesheet" href="/scaling-book/assets/css/bootstrap.min.css?a4b3f509e79c54a512b890d73235ef04"> <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/css/mdb.min.css" integrity="sha256-jpjYvU3G3N6nrrBwXJoVEYI/0zw8htfFnhT9ljN3JJw=" crossorigin="anonymous"> <link rel="preload" as="font" type="font/woff2" crossorigin href="/scaling-book/assets/fonts/roboto/roboto-latin.woff2"> <link defer rel="stylesheet" href="/scaling-book/assets/css/academicons.min.css?f0b7046b84e425c55f3463ac249818f5"> <link defer rel="stylesheet" href="/scaling-book/assets/css/scholar-icons.css?62b2ac103a88034e6882a5be5f3e2772"> <link defer rel="stylesheet" href="/scaling-book/assets/css/jekyll-pygments-themes-vs.css?4ee1a2facd1a8a76347f4bd43a740500" media="" id="highlight_theme_light"> <link rel="icon" href="/scaling-book/assets/img/favicon.ico?40fa984da00a7d776e79162fb29402f2" sizes="48x48"> <link rel="icon" type="image/png" href="/scaling-book/assets/img/favicon-96x96.png?6fad83cd890cb60f9e27143afa90eefd" sizes="96x96"> <link rel="icon" type="image/png" href="/scaling-book/assets/img/favicon-192x192.png?3fdfb758795130ba54a94ab468f6e7ec" sizes="192x192"> <link rel="apple-touch-icon" href="/scaling-book/assets/img/apple-touch-icon.png?0e2a9fab4bca21b912aa5871abd33c2a"> <link rel="stylesheet" href="/scaling-book/assets/css/main.css?d41d8cd98f00b204e9800998ecf8427e"> <link rel="canonical" href="https://jax-ml.github.io/scaling-book/conclusion/"> <script src="/scaling-book/assets/js/theme.js?9a0c749ec5240d9cda97bc72359a72c0"></script> <link defer rel="stylesheet" href="/scaling-book/assets/css/jekyll-pygments-themes-native.css?5847e5ed4a4568527aa6cfab446049ca" media="none" id="highlight_theme_dark"> <script>
+    initTheme();
+  </script> <script>
+  try {
+    if (localStorage.getItem("tufte-sidenotes-enabled") === "1") {
+      document.documentElement.classList.add("tufte-mode");
+    }
+  } catch (e) {}
+</script> <script src="/scaling-book/assets/js/distillpub/template.v2.js"></script> <script src="/scaling-book/assets/js/distillpub/transforms.v2.js"></script> <style type="text/css">.fake-img{background:#bbb;border:1px solid rgba(0,0,0,0.1);box-shadow:0 0 4px rgba(0,0,0,0.1);margin-bottom:12px}.fake-img p{font-family:monospace;color:white;text-align:left;margin:12px 0;text-align:center;font-size:16px}.algorithm{padding:10px;margin-top:5px;margin-bottom:5px;border-style:dashed;background-color:#fffaf2}.algorithm li{margin-bottom:0}</style> </head> <body> <d-front-matter> <script async type="text/json">
+      {
+            "title": "Conclusions and Further Reading",
+            "description": "Thank you for reading! Here we'll include a few more references for further study.",
+            "published": "February 04, 2025",
+            "authors": [
+              
+              {
+                "author": "Jacob Austin",
+                "authorURL": "https://www.jacobaustin.org/",
+                "affiliations": [
+                  {
+                    "name": "Google DeepMind",
+                    "url": ""
+                  }
+                ]
+              },
+              
+              {
+                "author": "Sholto Douglas",
+                "authorURL": "https://x.com/_sholtodouglas",
+                "affiliations": [
+                  {
+                    "name": "",
+                    "url": ""
+                  }
+                ]
+              },
+              
+              {
+                "author": "Roy Frostig",
+                "authorURL": "https://cs.stanford.edu/~rfrostig/",
+                "affiliations": [
+                  {
+                    "name": "",
+                    "url": ""
+                  }
+                ]
+              },
+              
+              {
+                "author": "Anselm Levskaya",
+                "authorURL": "https://anselmlevskaya.com/",
+                "affiliations": [
+                  {
+                    "name": "",
+                    "url": ""
+                  }
+                ]
+              },
+              
+              {
+                "author": "Charlie Chen",
+                "authorURL": "https://x.com/charliexychen",
+                "affiliations": [
+                  {
+                    "name": "",
+                    "url": ""
+                  }
+                ]
+              },
+              
+              {
+                "author": "Sharad Vikram",
+                "authorURL": "https://sharadvikram.com/",
+                "affiliations": [
+                  {
+                    "name": "",
+                    "url": ""
+                  }
+                ]
+              },
+              
+              {
+                "author": "Federico Lebron",
+                "authorURL": "https://fedelebron.com/",
+                "affiliations": [
+                  {
+                    "name": "",
+                    "url": ""
+                  }
+                ]
+              },
+              
+              {
+                "author": "Peter Choy",
+                "authorURL": "https://x.com/pchoy95",
+                "affiliations": [
+                  {
+                    "name": "",
+                    "url": ""
+                  }
+                ]
+              },
+              
+              {
+                "author": "Vinay Ramasesh",
+                "authorURL": "https://x.com/vinayramasesh",
+                "affiliations": [
+                  {
+                    "name": "",
+                    "url": ""
+                  }
+                ]
+              },
+              
+              {
+                "author": "Albert Webson",
+                "authorURL": "https://representation.ai/",
+                "affiliations": [
+                  {
+                    "name": "",
+                    "url": ""
+                  }
+                ]
+              },
+              
+              {
+                "author": "Reiner Pope<sup>*</sup>",
+                "authorURL": "https://x.com/reinerpope",
+                "affiliations": [
+                  {
+                    "name": "",
+                    "url": ""
+                  }
+                ]
+              }
+              
+            ],
+            "katex": {
+              "delimiters": [
+                {
+                  "left": "$",
+                  "right": "$",
+                  "display": false
+                },
+                {
+                  "left": "$$",
+                  "right": "$$",
+                  "display": true
+                }
+              ]
+            }
+          }
+    </script> </d-front-matter> <header> <script>
+    function goToTop() {
+      document.body.scrollTop = 0; // For Safari
+      document.documentElement.scrollTop = 0; // For Chrome, Firefox, IE and Opera
+    }
+
+    // When the user scrolls down 20px from the top of the document, show the button
+    window.onscroll = function() {scrollFunction()};
+
+    function scrollFunction() {
+      // Get the button:
+      let mybutton = document.getElementById("top-button");
+      if (!mybutton) return;
+
+      if (document.body.scrollTop > 40 || document.documentElement.scrollTop > 40) {
+        mybutton.style.display = "block";
+      } else {
+        mybutton.style.display = "none";
+      }
+  }
+  </script> <nav id="navbar" class="navbar navbar-light navbar-expand-sm fixed-top" role="navigation"> <div class="container"> <a class="navbar-brand title font-weight-lighter" href="/scaling-book"> How To Scale Your Model </a> <button class="navbar-toggler collapsed ml-auto" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation"> <span class="sr-only">Toggle navigation</span> <span class="icon-bar top-bar"></span> <span class="icon-bar middle-bar"></span> <span class="icon-bar bottom-bar"></span> </button> <div class="left-button section-button"><a href="../jax-stuff"><svg viewbox="-78.5 0 512 512"><path d="M257 64L291 98 128 262 291 426 257 460 61 262 257 64Z"></path></svg></a></div> <div class="right-button section-button"><a href="../gpus"><svg viewbox="-78.5 0 512 512"><path d="M98 460L64 426 227 262 64 98 98 64 294 262 98 460Z"></path></svg></a></div> <div class="collapse navbar-collapse text-right" id="navbarNav"> <ul class="navbar-nav ml-auto flex-nowrap"> <li class="nav-item "> <a class="nav-link" href="/scaling-book/"> </a> </li> <li class="nav-item nav-hidden"><a class="nav-link" href="../jax-stuff">Previous Part</a></li> <li class="nav-item nav-hidden"><a class="nav-link" href="../gpus">Next Part</a></li> <li class="nav-item dropdown "> <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"> <i class="ti ti-list dropdown-icon"></i> <span class="dropdown-text">Sections</span> </a> <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown"> <a class="dropdown-item " href="/scaling-book/index">Part 0. Introduction</a> <a class="dropdown-item " href="/scaling-book/roofline">Part 1. Intro to Rooflines</a> <a class="dropdown-item " href="/scaling-book/tpus">Part 2. All About TPUs</a> <a class="dropdown-item " href="/scaling-book/sharding">Part 3. Sharded Matmuls</a> <a class="dropdown-item " href="/scaling-book/transformers">Part 4. Transformers</a> <a class="dropdown-item " href="/scaling-book/training">Part 5. Training</a> <a class="dropdown-item " href="/scaling-book/applied-training">Part 6. Training LLaMA</a> <a class="dropdown-item " href="/scaling-book/inference">Part 7. Inference</a> <a class="dropdown-item " href="/scaling-book/applied-inference">Part 8. Serving LLaMA</a> <a class="dropdown-item " href="/scaling-book/profiling">Part 9. Profiling</a> <a class="dropdown-item " href="/scaling-book/jax-stuff">Part 10. All About JAX</a> <a class="dropdown-item " href="/scaling-book/conclusion">Part 11. Conclusions</a> <a class="dropdown-item " href="/scaling-book/gpus">Part 12. GPUs</a> </div> </li> <li class="toggle-container"> <button id="light-toggle" title="Change theme"> <svg id="light-toggle-system" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewbox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.173 14.83a4 4 0 1 1 5.657 -5.657"></path><path d="M11.294 12.707l.174 .247a7.5 7.5 0 0 0 8.845 2.492a9 9 0 0 1 -14.671 2.914"></path><path d="M3 12h1"></path><path d="M12 3v1"></path><path d="M5.6 5.6l.7 .7"></path><path d="M3 21l18 -18"></path></svg> <svg id="light-toggle-dark" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewbox="0 0 24 24" fill="currentColor"><path d="M12 1.992a10 10 0 1 0 9.236 13.838c.341 -.82 -.476 -1.644 -1.298 -1.31a6.5 6.5 0 0 1 -6.864 -10.787l.077 -.08c.551 -.63 .113 -1.653 -.758 -1.653h-.266l-.068 -.006l-.06 -.002z"></path></svg> <svg id="light-toggle-light" xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewbox="0 0 24 24" fill="currentColor"><path d="M12 19a1 1 0 0 1 .993 .883l.007 .117v1a1 1 0 0 1 -1.993 .117l-.007 -.117v-1a1 1 0 0 1 1 -1z"></path><path d="M18.313 16.91l.094 .083l.7 .7a1 1 0 0 1 -1.32 1.497l-.094 -.083l-.7 -.7a1 1 0 0 1 1.218 -1.567l.102 .07z"></path><path d="M7.007 16.993a1 1 0 0 1 .083 1.32l-.083 .094l-.7 .7a1 1 0 0 1 -1.497 -1.32l.083 -.094l.7 -.7a1 1 0 0 1 1.414 0z"></path><path d="M4 11a1 1 0 0 1 .117 1.993l-.117 .007h-1a1 1 0 0 1 -.117 -1.993l.117 -.007h1z"></path><path d="M21 11a1 1 0 0 1 .117 1.993l-.117 .007h-1a1 1 0 0 1 -.117 -1.993l.117 -.007h1z"></path><path d="M6.213 4.81l.094 .083l.7 .7a1 1 0 0 1 -1.32 1.497l-.094 -.083l-.7 -.7a1 1 0 0 1 1.217 -1.567l.102 .07z"></path><path d="M19.107 4.893a1 1 0 0 1 .083 1.32l-.083 .094l-.7 .7a1 1 0 0 1 -1.497 -1.32l.083 -.094l.7 -.7a1 1 0 0 1 1.414 0z"></path><path d="M12 2a1 1 0 0 1 .993 .883l.007 .117v1a1 1 0 0 1 -1.993 .117l-.007 -.117v-1a1 1 0 0 1 1 -1z"></path><path d="M12 7a5 5 0 1 1 -4.995 5.217l-.005 -.217l.005 -.217a5 5 0 0 1 4.995 -4.783z"></path></svg> </button> </li> </ul> </div> </div> </nav> <progress id="progress" value="0"> <div class="progress-container"> <span class="progress-bar"></span> </div> </progress> </header> <div class="post distill"> <d-title> <h1>Conclusions and Further Reading</h1> <p>Part 11 of <a href="/scaling-book">How To Scale Your Model</a> (<a href="../jax-stuff">Part 10: JAX</a> | <a href="../gpus">Part 12: GPUs</a>)</p> <p>Thank you for reading! Here we'll include a few more references for further study.</p> </d-title> <d-byline> <div class="byline grid"> <div class="authors-affiliations grid"> <h3 style="grid-column: 1; grid-row: 1;">Authors</h3> <h3></h3> <h3>Affiliation</h3> <p class="author" style="grid-column: 1; grid-row: 2;"> <a class="name" href="https://www.jacobaustin.org/" rel="external nofollow noopener" target="_blank">Jacob Austin</a> </p> <p class="affiliation" style="grid-column: 3; grid-row: 2;"> <span class="affiliation">Google DeepMind</span> </p> <p class="author" style="grid-column: 1; grid-row: 3;"> <a class="name" href="https://x.com/_sholtodouglas" rel="external nofollow noopener" target="_blank">Sholto Douglas</a> </p> <p class="affiliation" style="grid-column: 3; grid-row: 3;"> <span class="affiliation"></span> </p> <p class="author" style="grid-column: 1; grid-row: 4;"> <a class="name" href="https://cs.stanford.edu/~rfrostig/" rel="external nofollow noopener" target="_blank">Roy Frostig</a> </p> <p class="affiliation" style="grid-column: 3; grid-row: 4;"> <span class="affiliation"></span> </p> <p class="author" style="grid-column: 1; grid-row: 5;"> <a class="name" href="https://anselmlevskaya.com/" rel="external nofollow noopener" target="_blank">Anselm Levskaya</a> </p> <p class="affiliation" style="grid-column: 3; grid-row: 5;"> <span class="affiliation"></span> </p> <p class="author" style="grid-column: 1; grid-row: 6;"> <a class="name" href="https://x.com/charliexychen" rel="external nofollow noopener" target="_blank">Charlie Chen</a> </p> <p class="affiliation" style="grid-column: 3; grid-row: 6;"> <span class="affiliation"></span> </p> <p class="author" style="grid-column: 1; grid-row: 7;"> <a class="name" href="https://sharadvikram.com/" rel="external nofollow noopener" target="_blank">Sharad Vikram</a> </p> <p class="affiliation" style="grid-column: 3; grid-row: 7;"> <span class="affiliation"></span> </p> <p class="author" style="grid-column: 2; grid-row: 2;"> <a class="name" href="https://fedelebron.com/" rel="external nofollow noopener" target="_blank">Federico Lebron</a> </p> <p class="affiliation" style="grid-column: 3; grid-row: 2;"> <span class="affiliation"></span> </p> <p class="author" style="grid-column: 2; grid-row: 3;"> <a class="name" href="https://x.com/pchoy95" rel="external nofollow noopener" target="_blank">Peter Choy</a> </p> <p class="affiliation" style="grid-column: 3; grid-row: 3;"> <span class="affiliation"></span> </p> <p class="author" style="grid-column: 2; grid-row: 4;"> <a class="name" href="https://x.com/vinayramasesh" rel="external nofollow noopener" target="_blank">Vinay Ramasesh</a> </p> <p class="affiliation" style="grid-column: 3; grid-row: 4;"> <span class="affiliation"></span> </p> <p class="author" style="grid-column: 2; grid-row: 5;"> <a class="name" href="https://representation.ai/" rel="external nofollow noopener" target="_blank">Albert Webson</a> </p> <p class="affiliation" style="grid-column: 3; grid-row: 5;"> <span class="affiliation"></span> </p> <p class="author" style="grid-column: 2; grid-row: 6;"> <a class="name" href="https://x.com/reinerpope" rel="external nofollow noopener" target="_blank">Reiner Pope<sup>*</sup></a> </p> <p class="affiliation" style="grid-column: 3; grid-row: 6;"> <span class="affiliation"></span> </p> </div> <div> <h3>Published</h3> <p>Feb. 4, 2025</p> </div> </div> </d-byline> <d-article> <d-contents> <nav class="l-text figcaption"> <h3>Contents</h3> <div> <a href="#acknowledgments">Acknowledgments</a> </div> <div> <a href="#further-reading">Further Reading</a> </div> <div> <a href="#feedback">Feedback</a> </div> </nav> </d-contents> <p><strong>Thank you for reading the whole thing and congratulations on making it all the way to the end.</strong> Before we conclude, a few acknowledgments:</p> <h2 id="acknowledgments">Acknowledgments</h2> <p>This document represents a significant collective investment from many people at Google DeepMind, who we’d like to briefly acknowledge!</p> <ul> <li>James Bradbury, Reiner Pope, Noam Shazeer, and Blake Hechtman originally derived many of the ideas in this manuscript, and were early to understand the systems view of the Transformer.</li> <li>Sholto Douglas wrote the first version of this doc and is responsible for kicking off the project. He is more than anyone responsible for the overall narrative of this doc.</li> <li>Jacob Austin led the work of transforming this first version from rough notes into a more polished and comprehensive artifact. He did much of the work of editing, formatting, and releasing this document, and coordinated contributions from other authors.</li> <li>Most of the figures and animations were made by Anselm Levskaya and Charlie Chen.</li> <li>Charlie Chen wrote the inference section and drew many of the inference figures.</li> <li>Roy Frostig helped with publication, editing, and many other steps of the journey.</li> </ul> <p>We’d also like to thank many others who gave critical feedback throughout the process, in particular Zak Stone, Nikhil Sethi, Caitlin Stanton, Alek Dimitriev, Sridhar Lakshmanamurthy, Albert Magyar, Diwakar Gupta, Jeff Dean, Corry Wang, Matt Johnson, Peter Hawkins, and many others. Thanks to Ruiqi Gao for help with the HTML formatting.</p> <p><strong>Thank you all!</strong></p> <p class="announce">Before you go, you might also enjoy reading the new <a href="../gpus">Part 12</a> on NVIDIA GPUs!</p> <h2 id="further-reading">Further Reading</h2> <p>There is a bunch of related writing, including the following:</p> <ul> <li> <a href="https://henryhmko.github.io/posts/tpu/tpu.html" rel="external nofollow noopener" target="_blank"><strong>TPU Deep Dive</strong></a>: a wonderful in-depth look at the TPU architecture in the spirit of this book.</li> <li> <a href="https://fleetwood.dev/posts/domain-specific-architectures" rel="external nofollow noopener" target="_blank"><strong>Domain specific architectures for AI inference</strong></a>: a hardware and model deep dive in the spirit of this book.</li> <li> <a href="https://dl.acm.org/doi/pdf/10.1145/3360307" rel="external nofollow noopener" target="_blank"><strong>A Domain-Specific Supercomputer for Training Deep Neural Networks</strong></a>: one of the OG TPU papers, this has a lot of great details about the Google TPU program not covered here.</li> <li> <a href="https://horace.io/brrr_intro.html" rel="external nofollow noopener" target="_blank"><strong>Making Deep Learning Go Brrrr From First Principles</strong></a>: a more GPU and PyTorch-focused tutorial on LLM rooflines and performance engineering.</li> <li> <a href="https://jax.readthedocs.io/en/latest/pallas/tpu/details.html" rel="external nofollow noopener" target="_blank"><strong>Writing TPU Kernels with Pallas</strong></a>: increasingly, TPU programming involves writing custom kernels in Pallas. This series discusses how to write kernels and many lower level TPU details that aren’t mentioned here.</li> <li> <a href="https://siboehm.com/articles/22/CUDA-MMM" rel="external nofollow noopener" target="_blank"><strong>How to Optimize a CUDA Matmul Kernel for cuBLAS-like Performance: a Worklog</strong></a>: while GPU and CUDA specific, this is an excellent blog post showing how to optimize a matmul kernel in CUDA. This might be a good deep dive into how TPUs and GPUs are different.</li> <li> <a href="https://jax.readthedocs.io/en/latest/notebooks/Distributed_arrays_and_automatic_parallelization.html" rel="external nofollow noopener" target="_blank"><strong>Distributed arrays and automatic parallelization</strong></a>: this is a really nice guide to parallelism APIs in JAX and is a good way to learn how to actually implement some of the ideas we’ve discussed here.</li> <li> <a href="https://github.com/rwitten/HighPerfLLMs2024" rel="external nofollow noopener" target="_blank"><strong>Rafi Witten’s High Performance LLMs 2024 Class</strong></a>: our former colleague Rafi gave a great course on TPU performance engineering and the slides are all on GitHub. This covers a bunch of things in more depth than we do here.</li> <li> <a href="https://arxiv.org/abs/2211.05102" rel="external nofollow noopener" target="_blank"><strong>[2211.05102] Efficiently Scaling Transformer Inference</strong></a>: a detailed paper on the mathematics of Transformer inference. This is the inspiration for a lot of this document.</li> <li> <a href="https://huggingface.co/spaces/nanotron/ultrascale-playbook" rel="external nofollow noopener" target="_blank"><strong>Huggingface Ultra-Scale Playbook</strong></a>: something of a GPU analog to this book, this talks more at depth about how PyTorch implements parallelism techniques and memory-saving techniques during training.</li> <li> <a href="https://kipp.ly/transformer-inference-arithmetic/" rel="external nofollow noopener" target="_blank"><strong>Transformer Inference Arithmetic</strong></a>: a blog with many of the same ideas as this book and some excellent illustrations.</li> <li> <a href="https://stanford-cs336.github.io/spring2025/index.html#coursework" rel="external nofollow noopener" target="_blank"><strong>Stanford CS336 Slides and Videos</strong></a>: a fantastic Stanford course covering many details of LLM training and serving, with some useful exercises. Assignments 1 and 2 are particularly relevant.</li> <li> <a href="https://github.com/stas00/ml-engineering" rel="external nofollow noopener" target="_blank"><strong>Stas Bekman’s ML Engineering Handbook</strong></a>: a highly practical guide to ML infrastructure, covering topics not addressed in this book like how to negotiate with cloud providers, cluster management, and empirical measurements of GPU throughput.</li> <li> <a href="https://blog.ezyang.com/2026/01/computing-sharding-with-einsum/" rel="external nofollow noopener" target="_blank"><strong>ezyang’s blog</strong></a>: a PyTorch lead’s blog on all things sharding + PyTorch, including a <a href="https://blog.ezyang.com/2019/05/pytorch-internals/" rel="external nofollow noopener" target="_blank">guide to PyTorch internals</a> and a <a href="https://blog.ezyang.com/2026/01/computing-sharding-with-einsum/" rel="external nofollow noopener" target="_blank">writeup of sharded matrix multiplication</a>. Lots of other good things here.</li> <li> <a href="https://www.aleksagordic.com/blog/collective-operations" rel="external nofollow noopener" target="_blank"><strong>The Anatomy of Collective Communication</strong></a>: a nice walkthrough of GPU and TPU collectives in the spirit of this book. Has a better writeup of N-D and GPU collectives than this book.</li> </ul> <p>There remains a lot of room for comprehensive writing in this area, so we hope this manuscript encourages more of it! We also believe that this is a fruitful area to study and research. In many cases, it can be done even without having many hardware accelerators on hand.</p> <h2 id="feedback">Feedback</h2> <p>Please leave comments or questions so that we can improve this further. You can reach our corresponding author, Jacob Austin, at jacobaustin123 [at] gmail [dot] com, or suggest edits by posting issues, pull requests, or discussions <a href="https://github.com/jax-ml/scaling-book" rel="external nofollow noopener" target="_blank">on GitHub</a>.</p> </d-article> <d-appendix> <d-footnote-list></d-footnote-list> <d-citation-list></d-citation-list> <div class="base-grid appendix-entry"> <h3 style="grid-column: 0;">Miscellaneous</h3> <p class="author-footnote" style="grid-column: text;"><sup>*</sup>Work done at Google DeepMind, now at MatX.</p> </div> <div class="base-grid appendix-entry"> <h3 style="grid-column: 0;">Citation</h3> <p class="author-footnote">For attribution in academic contexts, please cite this work as:</p> <div class="author-footnote"> <div class="language-bibtex highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="c">Austin et al., "How to Scale Your Model", Google DeepMind, online, 2025.</span>
+</code></pre></div></div> </div> <p class="author-footnote">or as a BibTeX entry:</p> <div class="author-footnote"> <div class="language-bibtex highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="nc">@article</span><span class="p">{</span><span class="nl">scaling-book</span><span class="p">,</span>
+      <span class="na">title</span> <span class="p">=</span> <span class="s">{How to Scale Your Model}</span><span class="p">,</span>
+      <span class="na">author</span> <span class="p">=</span> <span class="s">{Austin, Jacob and Douglas, Sholto and Frostig, Roy and Levskaya, Anselm and Chen, Charlie and Vikram, Sharad
+      and Lebron, Federico and Choy, Peter and Ramasesh, Vinay and Webson, Albert and Pope, Reiner}</span><span class="p">,</span>
+      <span class="na">publisher</span> <span class="p">=</span> <span class="s">{Google DeepMind}</span><span class="p">,</span>
+      <span class="na">howpublished</span> <span class="p">=</span> <span class="s">{Online}</span><span class="p">,</span>
+      <span class="na">note</span> <span class="p">=</span> <span class="s">{Retrieved from https://jax-ml.github.io/scaling-book/}</span><span class="p">,</span>
+      <span class="na">year</span> <span class="p">=</span> <span class="s">{2025}</span>
+    <span class="p">}</span>
+</code></pre></div></div> </div> </div> </d-appendix> <d-bibliography src="/scaling-book/assets/bibliography/"></d-bibliography> <div id="giscus_thread" style="max-width: 930px; margin: 0 auto;"> <script>
+      let giscusTheme = determineComputedTheme();
+      let giscusAttributes = {
+        src: 'https://giscus.app/client.js',
+        'data-repo': 'jax-ml/scaling-book',
+        'data-repo-id': '',
+        'data-category': 'General',
+        'data-category-id': '',
+        'data-mapping': 'title',
+        'data-strict': '1',
+        'data-reactions-enabled': '1',
+        'data-emit-metadata': '0',
+        'data-input-position': 'bottom',
+        'data-theme': giscusTheme,
+        'data-loading': '1',
+        'data-lang': 'en',
+        crossorigin: 'anonymous',
+        async: '',
+      };
+
+      let giscusScript = document.createElement('script');
+      Object.entries(giscusAttributes).forEach(([key, value]) => giscusScript.setAttribute(key, value));
+      document.getElementById('giscus_thread').appendChild(giscusScript);
+    </script> <noscript>Please enable JavaScript to view the <a href="http://giscus.app/?ref_noscript" rel="external nofollow noopener" target="_blank">comments powered by giscus.</a> </noscript> </div> </div> <footer class="sticky-bottom mt-5" role="contentinfo"> <div class="container"> © Copyright 2026 . Powered by <a href="https://jekyllrb.com/" target="_blank" rel="external nofollow noopener">Jekyll</a> with <a href="https://github.com/alshedivat/al-folio" rel="external nofollow noopener" target="_blank">al-folio</a> theme. Hosted by <a href="https://pages.github.com/" target="_blank" rel="external nofollow noopener">GitHub Pages</a>. </div> </footer> <script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script> <script src="/scaling-book/assets/js/bootstrap.bundle.min.js"></script> <script src="https://cdn.jsdelivr.net/npm/mdbootstrap@4.20.0/js/mdb.min.js" integrity="sha256-NdbiivsvWt7VYCt6hYNT3h/th9vSTL4EDWeGs5SN3DA=" crossorigin="anonymous"></script> <script defer src="https://cdn.jsdelivr.net/npm/medium-zoom@1.1.0/dist/medium-zoom.min.js" integrity="sha256-ZgMyDAIYDYGxbcpJcfUnYwNevG/xi9OHKaR/8GK+jWc=" crossorigin="anonymous"></script> <script defer src="/scaling-book/assets/js/zoom.js?85ddb88934d28b74e78031fd54cf8308"></script> <script src="/scaling-book/assets/js/no_defer.js?2781658a0a2b13ed609542042a859126"></script> <script defer src="/scaling-book/assets/js/common.js?e0514a05c5c95ac1a93a8dfd5249b92e"></script> <script defer src="/scaling-book/assets/js/copy_code.js?12775fdf7f95e901d7119054556e495f" type="text/javascript"></script> <script defer src="/scaling-book/assets/js/jupyter_new_tab.js?d9f17b6adc2311cbabd747f4538bb15f"></script> <script defer src="/scaling-book/assets/js/sidenotes.js?5488feda9017667a4b53f647c3851cee"></script> <script defer type="text/javascript" id="MathJax-script" src="https://cdn.jsdelivr.net/npm/mathjax@3.2.2/es5/tex-mml-chtml.js" integrity="sha256-MASABpB4tYktI2Oitl4t+78w/lyA+D7b/s9GEP0JOGI=" crossorigin="anonymous"></script> <script src="/scaling-book/assets/js/mathjax-setup.js?70d799092f862ad98c7876aa47712e20"></script> <script defer src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6" crossorigin="anonymous"></script> <script defer src="/scaling-book/assets/js/progress-bar.js?2f30e0e6801ea8f5036fa66e1ab0a71a" type="text/javascript"></script> <script src="/scaling-book/assets/js/vanilla-back-to-top.min.js?f40d453793ff4f64e238e420181a1d17"></script> <script>
+    addBackToTop();
+  </script> </body> </html>

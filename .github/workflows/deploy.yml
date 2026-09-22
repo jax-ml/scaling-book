@@ -16,7 +16,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install ImageMagick
-        run: sudo apt-get install -y imagemagick
+        # Refresh the runner's package index first; a stale one can point at
+        # superseded .debs that the mirror no longer serves (404).
+        run: sudo apt-get update && sudo apt-get install -y imagemagick
 
       - name: Setup Python
         uses: actions/setup-python@v5

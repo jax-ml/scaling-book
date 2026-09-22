@@ -502,7 +502,7 @@ Here's an interactive animation to play with this, showing the total compute tim
   <figcaption><b>Figure:</b> forward-pass MLP compute and communication time on a TPU v5p 16x16x16 ($D=8192$, $F=32768$) as a function of batch size, using $T_\text{FSDP comms}$, $T_\text{TP comms}$ and $T_\text{math}$ from above. Drag the slider to change the FSDP/TP split. Any batch size in the shaded region is comms-bound.</figcaption>
 </figure>
 
-You'll notice this generally agrees with the above (minimum around FSDP=256, TP=16), plus or minus some wiggle factor for some slight differences in the number of axes for each.
+You'll notice this generally agrees with the above: the best split, FSDP=512 and TP=8, becomes compute-bound above a batch size of about 4e5, while every split with more tensor parallelism stays comms-bound at all batch sizes. Splits with less tensor parallelism need an even larger batch.
 
 ### Pipelining
 

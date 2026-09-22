@@ -197,6 +197,30 @@ d-appendix {
 }
 
 
+// Interactive plotly figures, embedded as iframes. Kept to the text column so
+// they never run under the sticky TOC, and sized by aspect ratio so they
+// shrink sensibly on phones.
+d-article figure.plotly-embed {
+  margin: 1.5rem 0 2rem;
+
+  iframe {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    min-height: 380px;
+    max-height: 540px;
+    border: 0;
+  }
+
+  // Distill hard-codes near-black caption ink, which vanishes in dark mode.
+  figcaption,
+  figcaption b {
+    margin-top: 0.5rem;
+    color: var(--global-text-color);
+  }
+}
+
+
 // Custom CSS from jaaustin@
 
 d-footnote {

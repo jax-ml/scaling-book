@@ -497,9 +497,10 @@ The black curve is the amount of time spent on model FLOPs, meaning any batch si
 
 Here's an interactive animation to play with this, showing the total compute time and communication time for different batch sizes:
 
-<div class="l-page">
-  <iframe src="{{ 'assets/plotly/training-roofline.html' | relative_url }}" frameborder='0' scrolling='no' height="400px" width="100%"></iframe>
-</div>
+<figure class="plotly-embed">
+  <iframe src="{{ 'assets/plotly/training-roofline.html' | relative_url }}" title="MLP roofline for mixed FSDP/TP" loading="lazy" scrolling="no"></iframe>
+  <figcaption><b>Figure:</b> forward-pass MLP compute and communication time on a TPU v5p 16x16x16 ($D=8192$, $F=32768$) as a function of batch size, using $T_\text{FSDP comms}$, $T_\text{TP comms}$ and $T_\text{math}$ from above. Drag the slider to change the FSDP/TP split. Any batch size in the shaded region is comms-bound.</figcaption>
+</figure>
 
 You'll notice this generally agrees with the above (minimum around FSDP=256, TP=16), plus or minus some wiggle factor for some slight differences in the number of axes for each.
 

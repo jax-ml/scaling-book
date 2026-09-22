@@ -280,19 +280,21 @@ This is kind of a fun question. Let $P$ be the number of prefill servers and $G$
 
 Sticking with LLaMA 70B for a second, let's actually look at the latency and throughput for different batch sizes during generation. As we showed in the previous section for PaLM models, this gives us a Pareto frontier for throughput/latency. Let's assume 16-way tensor parallelism since that's a reasonable bound on what we can use while staying compute-bound in the MLP blocks. We'll use a TPU v5e 4x4 topology here. **The slider controls the sequence length so you can see the effect of larger KV caches.**
 
-<div class="l-page">
-  <iframe src="{{ 'assets/plotly/pareto.html' | relative_url }}" frameborder='0' scrolling='no' height="400px" width="100%"></iframe>
-</div>
+<figure class="plotly-embed">
+  <iframe src="{{ 'assets/plotly/pareto.html' | relative_url }}" title="Latency/throughput Pareto frontier for LLaMA 3-70B" loading="lazy" scrolling="no"></iframe>
+  <figcaption><b>Figure:</b> throughput per chip against per-token latency for LLaMA 3-70B (int8 weights, 16-way tensor parallelism) on a TPU v5e 4x4, sweeping batch size along each curve. Drag the slider to change the context length; each curve stops at the largest batch whose KV cache fits in HBM.</figcaption>
+</figure>
 
 * **See how dramatic the tradeoff is between cost and latency.** At the cost of doubling per-token latency, we can achieve a roughly 100x reduction in per-token cost. Also, our latency can range anywhere from 5.5ms with low batch size to 20 ms with very large batches.
 * Note how at 2k context the throughput effectively plateaus at around 1 token / ms / chip when it hits the BS 120 roofline (120 here because we do int8 weights but bf16 FLOPs). As the sequence length increases, however, we can no longer fit this batch size in memory, so we never hit the point of full saturation.
 * Note how much higher the latency is at large batch sizes for the same throughput, since KV loading becomes dominant (instead of parameter loading).
 
-We can understand this better by breaking down the sources of cost and latency into param loading time, KV loading time, and FLOPs time. The red sector is the region in which we expect to be compute-bound in our MLP blocks.
+We can understand this better by breaking down the sources of cost and latency into param loading time, KV loading time, and FLOPs time. The shaded region is where we expect to be compute-bound in our MLP blocks.
 
-<div class="l-page">
-  <iframe src="{{ 'assets/plotly/latency_breakdown_log.html' | relative_url }}" frameborder='0' scrolling='no' height="400px" width="100%"></iframe>
-</div>
+<figure class="plotly-embed">
+  <iframe src="{{ 'assets/plotly/latency_breakdown_log.html' | relative_url }}" title="Decode step time breakdown for LLaMA 3-70B" loading="lazy" scrolling="no"></iframe>
+  <figcaption><b>Figure:</b> time per decode step for LLaMA 3-70B on a TPU v5e 4x4 as a function of batch size, split into parameter loading, KV cache loading, and FLOPs. The total is the KV loading time plus whichever of parameter loading or FLOPs is larger. Drag the slider to change the context length.</figcaption>
+</figure>
 
 This tells quite a story. You can see that initially, parameter loading represents the vast majority of the latency, until the batch size becomes large enough that FLOPs and KV loading become more significant. Notably, at all sequence lengths greater than 2048, we spend more time on KV cache loading than we do on FLOPs! **So while we can improve our hardware utilization by increasing batch size, at long context lengths KV loading always dominates the total step time.**
 

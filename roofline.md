@@ -228,7 +228,7 @@ Note that both models eventually achieve the peak hardware FLOPs/s, but the larg
 import matplotlib.pyplot as plt
 import numpy as np
 
-bs = np.arange(1, 512)
+bs = np.arange(1, 512, dtype=np.float64)
 
 def roofline(B, D, F):
   total_flops = 2*B*D*F

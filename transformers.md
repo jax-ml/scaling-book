@@ -297,7 +297,7 @@ Each KV cache is then effectively an array of size $[2, S, L, K, H]$ where the 2
 \textbf{MLP} & 3DF & 18BTDF \\[10pt]
 \textbf{Attention} & 4DNH & 24BTDNH + 12BT^2NH \\[10pt]
 \textbf{Other} & D & BTD \\[10pt]
-\textbf{Vocab} & DB \text{ (total, not per-layer)} & 12BTDV \\[10pt]
+\textbf{Vocab} & DB \text{ (total, not per-layer)} & 6BTDV \\[10pt]
 \end{array}
 $$ -->
 
@@ -307,7 +307,7 @@ $$ -->
 | **MLP**       | 3DF                       | 18BTDF                        |
 | **Attention** | 4DNH                      | 24BTDNH \+ 12BT<sup>2</sup>NH |
 | **Other**     | 2D                        | BTD                           |
-| **Vocab**     | DV (total, not per-layer) | 12BTDV                        |
+| **Vocab**     | DV (total, not per-layer) | 6BTDV                         |
 
 * The parameter count of the MLP block dominates the total parameter count and the MLP block also dominates the FLOPs budget as long as the sequence length $T < 8D$.
 * The total FLOPs budget during training is well approximated by $$6 \cdot \text{num_params} \cdot \text{num_tokens}$$ for reasonable context lengths.

@@ -1,0 +1,58 @@
+name: Build PDF Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release-pdf:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Setup Pandoc
+        uses: r-lib/actions/setup-pandoc@v2
+        with:
+          pandoc-version: '3.9.0.2'
+
+      - name: Setup Typst
+        uses: typst-community/setup-typst@v4
+        with:
+          typst-version: '0.14.2'
+
+      - name: Install PDF fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-roboto fonts-dejavu-core
+
+      - name: Build PDF
+        run: python3 bin/build_pdf.py
+
+      - name: Create release
+        if: ${{ env.ACT != 'true' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: 'pdf-${{ github.sha }}'
+          target_commitish: '${{ github.sha }}'
+          name: 'Scaling Book PDF ${{ github.sha }}'
+          draft: true
+          body: |
+            Automated PDF build for commit `${{ github.sha }}` on `main`.
+          files: |
+            scaling-book.pdf
+            scaling-book.typ
+            scaling-book-combined.md
+          fail_on_unmatched_files: true
+          make_latest: true

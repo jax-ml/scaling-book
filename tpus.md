@@ -21,6 +21,7 @@ next_section_name: "Part 3: Sharding"
 bibliography: main.bib
 
 giscus_comments: true
+giscus_discussion: 4
 
 authors:
   - name: Jacob Austin

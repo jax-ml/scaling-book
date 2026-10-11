@@ -19,6 +19,7 @@ next_section_name: "Part 7: Inference"
 bibliography: main.bib
 
 giscus_comments: true
+giscus_discussion: 8
 
 authors:
   - name: Jacob Austin

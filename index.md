@@ -10,6 +10,7 @@ htmlwidgets: true
 hidden: false
 
 giscus_comments: true
+giscus_discussion: 2
 
 section_number: 0
 

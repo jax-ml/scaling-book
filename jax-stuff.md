@@ -17,6 +17,7 @@ next_section_url: ../conclusion
 next_section_name: "Part 11: Conclusions"
 
 giscus_comments: true
+giscus_discussion: 12
 
 authors:
   - name: Jacob Austin

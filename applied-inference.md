@@ -17,6 +17,7 @@ next_section_url: ../profiling
 next_section_name: "Part 9: Profiling"
 
 giscus_comments: true
+giscus_discussion: 10
 
 authors:
   - name: Jacob Austin

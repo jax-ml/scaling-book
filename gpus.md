@@ -18,6 +18,7 @@ next_section_name: "The End"
 bibliography: main.bib
 
 giscus_comments: true
+giscus_discussion: 66
 
 authors:
   - name: Jacob Austin<sup>†</sup>

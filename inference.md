@@ -19,6 +19,7 @@ next_section_name: "Part 8: Serving LLaMA"
 bibliography: main.bib
 
 giscus_comments: true
+giscus_discussion: 9
 
 authors:
   - name: Jacob Austin

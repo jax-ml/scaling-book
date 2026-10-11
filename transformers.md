@@ -17,6 +17,7 @@ next_section_url: ../training
 next_section_name: "Part 5: Training"
 
 giscus_comments: true
+giscus_discussion: 6
 
 authors:
   - name: Jacob Austin

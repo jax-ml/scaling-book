@@ -19,6 +19,7 @@ next_section_name: "Part 2: TPUs"
 bibliography: main.bib
 
 giscus_comments: true
+giscus_discussion: 3
 
 authors:
   - name: Jacob Austin

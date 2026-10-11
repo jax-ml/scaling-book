@@ -19,6 +19,7 @@ next_section_name: "Part 6: Training LLaMA"
 bibliography: main.bib
 
 giscus_comments: true
+giscus_discussion: 7
 
 authors:
   - name: Jacob Austin

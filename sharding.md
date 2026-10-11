@@ -17,6 +17,7 @@ next_section_url: ../transformers
 next_section_name: "Part 4: Transformer Math"
 
 giscus_comments: true
+giscus_discussion: 5
 
 authors:
   - name: Jacob Austin

@@ -17,6 +17,7 @@ next_section_url: "../gpus"
 next_section_name: "Part 12: GPUs"
 
 giscus_comments: true
+giscus_discussion: 13
 
 authors:
   - name: Jacob Austin

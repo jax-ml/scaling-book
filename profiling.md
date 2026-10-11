@@ -17,6 +17,7 @@ next_section_url: ../jax-stuff
 next_section_name: "Part 10: JAX"
 
 giscus_comments: true
+giscus_discussion: 11
 
 authors:
   - name: Jacob Austin

@@ -143,7 +143,7 @@ A matmul would look nearly identical except it would load into the MXU instead o
 
 The toroidal structure reduces the maximum distance between any two nodes from $N$ to $N / 2$, making communication much faster. TPUs also have a "twisted torus" configuration that wraps the torus in a Mobius-strip like topology to further reduce the average distance between nodes.
 
-**TPU pods (connected by ICI) can get really big:** the maximum pod size (called a **superpod**) for TPU7x consists of 9216 chips, composed of reconfigurable cubes of `4x4x4` chips<d-footnote>by reconfigurable, we mean they can be dynamically re-shaped into any 3D topology of 4nx4mx4k using a shared optical switch (OCS)</d-footnote> connected by [optical wraparound links](https://arxiv.org/pdf/2208.10041)<d-footnote>The optical switch is simply a reconfigurable connection with the same ICI bandwidth. It just lets us connect cubes while retaining a wraparound link.</d-footnote> that we can reconfigure to connect very large topologies.
+**TPU pods (connected by ICI) can get really big:** the maximum pod size (called a **superpod**) for TPU7x consists of 9216 chips, composed of reconfigurable cubes of `4x4x4` chips<d-footnote>by reconfigurable, we mean they can be dynamically re-shaped into any 3D topology of 4nx4mx4k using a shared optical circuit switch (OCS). The OCS is simply a reconfigurable connection with the same ICI bandwidth. It just lets us connect cubes while retaining a wraparound link.</d-footnote> connected by [optical wraparound links](https://arxiv.org/pdf/2208.10041) that we can reconfigure to connect very large topologies.
 
 {% include figure.liquid path="assets/img/tpu-rack.png" class="img-fluid" %}
 
@@ -344,11 +344,11 @@ Cross-lane reductions are much harder and involve a separate hardware unit calle
 
 The scalar core is the control unit of the TPU. It fetches and dispatches all instructions and executes transfers from HBM into VMEM, and can be programmed to do scalar metadata work. Because the scalar core is single-threaded, one side-effect of this is that each core of the TPU is only capable of creating one DMA request per cycle.
 
-To put this in context, a single scalar core controls a VPU (consisting of 4096 ALUs), 4 MXUs, 2 XLUs, and multiple DMA engines. The highly skewed nature of control per unit compute is a source of hardware efficiency, but also limits the ability to do data dependent vectorization in any interesting way.
+To put this in context, a single scalar core controls a VPU (consisting of 4096 ALUs), 2 MXUs, 2 XLUs, and multiple DMA engines. The highly skewed nature of control per unit compute is a source of hardware efficiency, but also limits the ability to do data dependent vectorization in any interesting way.
 
 ### Appendix B: How does a systolic array work?
 
-At the core of the TPU MXU is a `256x256` systolic array (`128x128` prior to TPU v6e). When fully saturated the systolic array can perform one `bf16[8,256] @ bf16[256,256] -> f32[8,256]`<d-footnote>If you are not familiar with this notation, it means: multiplying a `8x256` matrix with bfloat16 elements by a `256x256` matrix with bfloat16 elements and storing the results in a `8x256` matrix with float32 elements.</d-footnote> multiplication per 4 clock cycles (8 prior to TPUv6e).
+At the core of the TPU MXU is a `256x256` systolic array (`128x128` prior to TPU v6e). When fully saturated the systolic array can perform one `bf16[8,256] @ bf16[256,256] -> f32[8,256]`<d-footnote>If you are not familiar with this notation, it means: multiplying a `8x256` matrix with bfloat16 elements by a `256x256` matrix with bfloat16 elements and storing the results in a `8x256` matrix with float32 elements.</d-footnote> multiplication per 4 clock cycles<d-footnote>The MXU can load 8 rows of `f32` inputs and convert them to `bf16` every 4 cycles, or 16 rows of `bf16` inputs every 8 cycles. In either case, it amounts to 8 rows of `bf16` inputs every 4 cycles.</d-footnote> (8 prior to TPUv6e).
 
 * At its core, the systolic array is a 2D `256x256` (`=65,536`) grid of ALUs each capable of performing a multiply and add operation.
 * Weights (**W**, the `256x256` input) are passed down from above (called the RHS) while inputs (**X**, the `8x256` input) are passed in from the left (called the LHS).

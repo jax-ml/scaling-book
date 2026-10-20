@@ -67,11 +67,10 @@ def convert_figure_includes(content: str) -> str:
         path = path_match.group(1)
 
         # Extract caption if present - handle captions that may span multiple lines
-        caption_match = re.search(r'caption="(.*?)"(?:\s*%\}|\s+\w+)', attrs, re.DOTALL)
-        if not caption_match:
-            # Try simpler pattern
-            caption_match = re.search(r'caption="([^"]*)"', attrs, re.DOTALL)
+        # and may contain backslash-escaped quotes (e.g. caption="...<a href=\"...\">...")
+        caption_match = re.search(r'caption="((?:[^"\\]|\\.)*)"', attrs, re.DOTALL)
         caption = caption_match.group(1) if caption_match else ""
+        caption = caption.replace('\\"', '"')
 
         # Clean up caption - remove HTML tags and normalize whitespace
         caption = re.sub(r'<[^>]+>', '', caption)

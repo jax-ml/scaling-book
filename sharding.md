@@ -108,16 +108,6 @@ We use a variant of *named-axis notation* to describe *how* the tensor is sharde
 
 Taken together, we know that the local shape of the array (the size of the shard that an individual device holds) is $(\lvert I\rvert / 2, \lvert J\rvert / 2)$, where $$\lvert I\rvert$$ is the size of A's first dimension and $$\lvert J\rvert$$ is the size of A's second dimension.
 
-<b markdown=1 style="color: #048affff;">Pop Quiz [2D sharding across 1 axis]:</b> Consider an array `fp32[1024, 4096]` with sharding $A[I_{XY}, J]$ and mesh `{'X': 8, 'Y': 2}`. How much data is held by each device? How much time would it take to load this array from HBM on H100s (assuming `3.4e12` memory bandwidth per chip)?
-
-{% details Click here for the answer. %}
-
-$A[I_{XY}, J]$ shards the first dimension (I) along both the X and Y hardware axes. In this example, the local shape is $(\lvert I\rvert /(\lvert X\rvert \cdot \lvert Y\rvert), \lvert J\rvert)$. For the given example, the global shape is `fp32[1024, 4096]`, so the local shape is `fp32[64, 4096]`.
-
-Since each GPU has `4 * 64 * 4096 = 1MiB` bytes, this would take about `1e6 / 3.4e12 = 294ns`, although likely significantly more due to various overheads since this is so small.
-
-{% enddetails %}
-
 **Visualizing these shardings:** Let's try to visualize these shardings by looking at a 2D array of data split over 4 devices:
 
 {% include figure.liquid path="assets/img/sharding-colored1.png" class="img-fluid img-small" %}
@@ -141,6 +131,16 @@ We illustrate the other possibilities in the figure below:
 Here $A[I_{XY}, J]$ means that we treat the **X** and **Y** mesh axes as a larger flattened dimension and partition the **I** named axis across all the devices. The order of the multiple mesh-axis subscripts matters, as it specifies the traversal order of the partitioning across the grid.
 
 {% include figure.liquid path="assets/img/sharding-colored6.png" class="img-fluid img-small" %}
+
+<b markdown=1 style="color: #048affff;">Pop Quiz [2D sharding across 1 axis]:</b> Consider an array `fp32[1024, 4096]` with sharding $A[I_{XY}, J]$ and mesh `{'X': 8, 'Y': 2}`. How much data is held by each device? How much time would it take to load this array from HBM on H100s (assuming `3.4e12` memory bandwidth per chip)?
+
+{% details Click here for the answer. %}
+
+$A[I_{XY}, J]$ shards the first dimension (I) along both the X and Y hardware axes. In this example, the local shape is $(\lvert I\rvert /(\lvert X\rvert \cdot \lvert Y\rvert), \lvert J\rvert)$. For the given example, the global shape is `fp32[1024, 4096]`, so the local shape is `fp32[64, 4096]`.
+
+Since each GPU has `4 * 64 * 4096 = 1MiB` bytes, this would take about `1e6 / 3.4e12 = 294ns`, although likely significantly more due to various overheads since this is so small.
+
+{% enddetails %}
 
 Lastly, note that we *cannot* have multiple named axes sharded along the *same* mesh dimension. e.g. $A[I_X, J_X]$ is a nonsensical, forbidden sharding. Once a mesh dimension has been used to shard one dimension of an array, it is in a sense "spent".
 
